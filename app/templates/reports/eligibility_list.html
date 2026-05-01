@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Eligibility — {{ company.name }} — PMS{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Eligible Students — {{ company.name }}</h1>
+    <a href="{{ url_for('reports.placement_report') }}" class="btn btn-secondary">← Back to Report</a>
+</div>
+
+<div class="card glass-card">
+    <div class="company-criteria-bar">
+        <span><strong>Role:</strong> {{ company.role_offered }}</span>
+        <span><strong>Package:</strong> ₹{{ "%.2f"|format(company.package_lpa|float) }} LPA</span>
+        <span><strong>Min CGPA:</strong> {{ "%.2f"|format(company.min_cgpa|float) }}</span>
+        <span><strong>Max Backlogs:</strong> {{ company.max_backlogs }}</span>
+        <span><strong>Branches:</strong> {{ company.allowed_branches }}</span>
+    </div>
+</div>
+
+<div class="card glass-card">
+    <h2 class="card-title">Eligible Students ({{ eligible|length }})</h2>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Roll No</th><th>Name</th><th>Branch</th><th>CGPA</th><th>Backlogs</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for s in eligible %}
+            <tr>
+                <td>{{ s.roll_no if s.roll_no is defined else s['roll_no'] }}</td>
+                <td>{{ s.name if s.name is defined else s['name'] }}</td>
+                <td><span class="badge badge-branch">{{ s.branch if s.branch is defined else s['branch'] }}</span></td>
+                <td>{{ "%.2f"|format((s.cgpa if s.cgpa is defined else s['cgpa'])|float) }}</td>
+                <td>{{ s.backlogs if s.backlogs is defined else s['backlogs'] }}</td>
+                <td><span class="badge badge-unplaced">Unplaced</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if not eligible %}<p class="empty-state">No eligible students found.</p>{% endif %}
+</div>
+{% endblock %}

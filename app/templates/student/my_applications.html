@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}My Applications — PMS{% endblock %}
+{% block content %}
+<div class="page-header"><h1>My Applications</h1></div>
+<div class="card glass-card">
+    {% if applications %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Company</th><th>Role</th><th>Package</th><th>Applied</th><th>Status</th><th>Result</th></tr></thead>
+            <tbody>
+            {% for app in applications %}
+            <tr>
+                <td><strong>{{ app.company.name }}</strong></td>
+                <td>{{ app.company.role_offered }}</td>
+                <td>₹{{ "%.2f"|format(app.company.package_lpa|float) }} LPA</td>
+                <td>{{ app.applied_date.strftime('%d %b %Y') if app.applied_date else 'N/A' }}</td>
+                <td><span class="badge badge-{{ app.status|lower }}">{{ app.status }}</span></td>
+                <td>{% if app.result %}<span class="badge badge-{{ 'selected' if app.result.result == 'Selected' else 'rejected' }}">{{ app.result.result }}</span>{% else %}Pending{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">You haven't applied to any company yet. <a href="{{ url_for('student.companies') }}">View eligible companies →</a></p>
+    {% endif %}
+</div>
+{% endblock %}

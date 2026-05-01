@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Placement Report — PMS{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Placement Report</h1></div>
+
+<div class="stats-grid stats-grid-3">
+    <div class="stat-card glass-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e, #38ef7d);">✅</div>
+        <div class="stat-info"><span class="stat-value">{{ total_placed }}</span><span class="stat-label">Students Placed</span></div>
+    </div>
+    <div class="stat-card glass-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">👨‍🎓</div>
+        <div class="stat-info"><span class="stat-value">{{ total_students }}</span><span class="stat-label">Total Students</span></div>
+    </div>
+    <div class="stat-card glass-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏢</div>
+        <div class="stat-info"><span class="stat-value">{{ total_companies }}</span><span class="stat-label">Companies</span></div>
+    </div>
+</div>
+
+<div class="card glass-card">
+    <h2 class="card-title">Company-wise Report</h2>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead><tr><th>Company</th><th>Role</th><th>Package (LPA)</th><th>Applications</th><th>Selected</th><th>Rejected</th><th>Pending</th><th>Details</th></tr></thead>
+            <tbody>
+            {% for r in report_data %}
+            <tr>
+                <td><strong>{{ r.company_name if r.company_name is defined else r['company_name'] }}</strong></td>
+                <td>{{ r.role_offered if r.role_offered is defined else r['role_offered'] }}</td>
+                <td>₹{{ "%.2f"|format((r.package_lpa if r.package_lpa is defined else r['package_lpa'])|float) }}</td>
+                <td>{{ r.total_applications if r.total_applications is defined else r['total_applications'] }}</td>
+                <td><span class="badge badge-selected">{{ r.selected_count if r.selected_count is defined else r['selected_count'] }}</span></td>
+                <td><span class="badge badge-rejected">{{ r.rejected_count if r.rejected_count is defined else r['rejected_count'] }}</span></td>
+                <td>{{ r.pending_count if r.pending_count is defined else r['pending_count'] }}</td>
+                <td><a href="{{ url_for('reports.eligibility_list', company_id=r.company_id if r.company_id is defined else r['company_id']) }}" class="btn btn-sm btn-info">Eligible</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if not report_data %}<p class="empty-state">No data to display.</p>{% endif %}
+</div>
+{% endblock %}

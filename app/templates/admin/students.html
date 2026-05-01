@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Manage Students — PMS{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Manage Students</h1>
+    <a href="{{ url_for('admin.add_student') }}" class="btn btn-primary">+ Add Student</a>
+</div>
+<div class="card glass-card">
+    <div class="table-responsive">
+        <table class="data-table" id="students-table">
+            <thead>
+                <tr><th>Roll No</th><th>Name</th><th>Branch</th><th>CGPA</th><th>Backlogs</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {% for s in students %}
+            <tr>
+                <td><strong>{{ s.roll_no }}</strong></td>
+                <td>{{ s.name }}</td>
+                <td><span class="badge badge-branch">{{ s.branch }}</span></td>
+                <td>{{ "%.2f"|format(s.cgpa|float) }}</td>
+                <td>{{ s.backlogs }}</td>
+                <td><span class="badge badge-{{ s.placement_status|lower }}">{{ s.placement_status }}</span></td>
+                <td class="actions-cell">
+                    <a href="{{ url_for('admin.edit_student', student_id=s.id) }}" class="btn btn-sm btn-edit">Edit</a>
+                    <form method="POST" action="{{ url_for('admin.delete_student', student_id=s.id) }}" style="display:inline" onsubmit="return confirm('Delete {{ s.name }}?')">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if not students %}<p class="empty-state">No students found.</p>{% endif %}
+</div>
+{% endblock %}

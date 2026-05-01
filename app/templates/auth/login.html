@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Login — PMS{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card glass-card">
+        <div class="auth-header">
+            <span class="auth-logo">🎓</span>
+            <h1>Placement Management</h1>
+            <p class="auth-subtitle">Sign in to your account</p>
+        </div>
+        <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="btn-login">Sign In</button>
+        </form>
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register as Student</a></p>
+            <p class="auth-hint">Admin: admin / admin123</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
