@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PMS{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -50,7 +50,7 @@
         <button class="mobile-toggle" id="mobile-toggle" onclick="toggleSidebar()">☰</button>
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="flash-container">
+        <div class="flash-container animate-fade-in delay-1">
             {% for category, message in messages %}
             <div class="flash flash-{{ category }}" onclick="this.remove()">
                 <span class="flash-icon">{% if category == 'success' %}✅{% elif category == 'error' %}❌{% elif category == 'warning' %}⚠️{% else %}ℹ️{% endif %}</span>
@@ -60,7 +60,8 @@
         </div>
         {% endif %}
         {% endwith %}
-        <div class="content-wrapper">{% block content %}{% endblock %}</div>
+        <div class="content-wrapper animate-fade-in delay-2">{% block content %}{% endblock %}</div>
+
         <footer class="footer">
             <p>Placement Management System &bull; UCS310 — DBMS &bull; TIET</p>
             <p>Team Lead: Shivam Raj &bull; &copy; 2026</p>

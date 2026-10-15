@@ -4,7 +4,7 @@
 <div class="page-header"><h1>Placement Results</h1></div>
 
 {% if pending_apps %}
-<div class="card glass-card">
+<div class="card">
     <h2 class="card-title">Record New Result</h2>
     <form method="POST" action="{{ url_for('admin.record_result') }}" class="result-form">
         <div class="form-row">
@@ -37,7 +37,7 @@
 </div>
 {% endif %}
 
-<div class="card glass-card">
+<div class="card">
     <h2 class="card-title">All Results</h2>
     <div class="table-responsive">
         <table class="data-table">

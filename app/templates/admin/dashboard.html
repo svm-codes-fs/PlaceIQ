@@ -2,77 +2,85 @@
 {% block title %}Admin Dashboard — PMS{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>Admin Dashboard</h1>
-    <p class="page-subtitle">Placement Management Overview</p>
+    <div>
+        <h1>Admin Dashboard</h1>
+        <p class="page-subtitle">Placement Management Overview</p>
+    </div>
 </div>
 
-<div class="stats-grid">
-    <div class="stat-card glass-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">👨‍🎓</div>
-        <div class="stat-info">
-            <span class="stat-value">{{ total_students }}</span>
-            <span class="stat-label">Total Students</span>
-        </div>
+<!-- Journey Timeline Layout -->
+<div class="journey-container">
+    <div class="journey-node">
+        <div class="journey-icon">👨‍🎓</div>
+        <span class="journey-value">{{ total_students }}</span>
+        <span class="journey-label">Total Students</span>
     </div>
-    <div class="stat-card glass-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e, #38ef7d);">✅</div>
-        <div class="stat-info">
-            <span class="stat-value">{{ placed_students }}</span>
-            <span class="stat-label">Placed</span>
-        </div>
+    
+    <div class="journey-node">
+        <div class="journey-icon">📊</div>
+        <span class="journey-value">{{ placed_students }} / {{ unplaced_students }}</span>
+        <span class="journey-label">Placed / Unplaced</span>
     </div>
-    <div class="stat-card glass-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #fc5c7d, #6a82fb);">⏳</div>
-        <div class="stat-info">
-            <span class="stat-value">{{ unplaced_students }}</span>
-            <span class="stat-label">Unplaced</span>
-        </div>
+
+    <div class="journey-node">
+        <div class="journey-icon">📋</div>
+        <span class="journey-value">{{ total_applications }}</span>
+        <span class="journey-label">Applications</span>
     </div>
-    <div class="stat-card glass-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">🏢</div>
-        <div class="stat-info">
-            <span class="stat-value">{{ total_companies }}</span>
-            <span class="stat-label">Companies</span>
-        </div>
+
+    <div class="journey-node">
+        <div class="journey-icon">🏢</div>
+        <span class="journey-value">{{ total_companies }}</span>
+        <span class="journey-label">Companies</span>
     </div>
-    <div class="stat-card glass-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">📋</div>
-        <div class="stat-info">
-            <span class="stat-value">{{ total_applications }}</span>
-            <span class="stat-label">Applications</span>
-        </div>
-    </div>
-    <div class="stat-card glass-card">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a, #fee140);">🏆</div>
-        <div class="stat-info">
-            <span class="stat-value">{{ total_offers }}</span>
-            <span class="stat-label">Offers Made</span>
-        </div>
+
+    <div class="journey-node">
+        <div class="journey-icon">🏆</div>
+        <span class="journey-value">{{ total_offers }}</span>
+        <span class="journey-label">Offers Made</span>
     </div>
 </div>
 
 {% if total_students > 0 %}
-<div class="card glass-card">
-    <h2 class="card-title">Placement Progress</h2>
+<div class="card">
+    <h2 class="card-title">Placement Progress Overview</h2>
     <div class="progress-bar-container">
-        <div class="progress-bar" style="width: {{ (placed_students / total_students * 100)|round(1) }}%">
-            {{ (placed_students / total_students * 100)|round(1) }}%
+        <div class="progress-bar" style="width: {{ (placed_students / total_students * 100)|round(1) }}%"></div>
+    </div>
+    <div class="overview-stats">
+        <div class="overview-stat">
+            <span class="overview-val">{{ (placed_students / total_students * 100)|round(1) }}%</span>
+            <span class="overview-lbl">Placement Rate</span>
+        </div>
+        <div class="overview-stat">
+            <span class="overview-val">{{ placed_students }}</span>
+            <span class="overview-lbl">Placed Students</span>
+        </div>
+        <div class="overview-stat">
+            <span class="overview-val">{{ unplaced_students }}</span>
+            <span class="overview-lbl">Remaining</span>
         </div>
     </div>
-    <p class="progress-label">{{ placed_students }} out of {{ total_students }} students placed</p>
 </div>
 {% endif %}
 
-<div class="card glass-card">
+<div class="card">
     <h2 class="card-title">Recent Applications</h2>
     {% if recent_apps %}
     <div class="table-responsive">
         <table class="data-table">
-            <thead><tr><th>Student</th><th>Company</th><th>Status</th><th>Date</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Company</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
             <tbody>
             {% for app in recent_apps %}
             <tr>
-                <td>{{ app.student.name }}</td>
+                <td><strong>{{ app.student.name }}</strong></td>
                 <td>{{ app.company.name }}</td>
                 <td><span class="badge badge-{{ app.status|lower }}">{{ app.status }}</span></td>
                 <td>{{ app.applied_date.strftime('%d %b %Y') if app.applied_date else 'N/A' }}</td>
@@ -82,7 +90,7 @@
         </table>
     </div>
     {% else %}
-    <p class="empty-state">No applications yet.</p>
+    <p class="empty-state">No applications have been submitted recently.</p>
     {% endif %}
 </div>
 {% endblock %}
