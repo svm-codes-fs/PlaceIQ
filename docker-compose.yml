@@ -1,0 +1,74 @@
+# Full local stack:  docker compose up --build
+#   frontend  http://localhost:3000
+#   api       http://localhost:5000
+name: placeiq
+
+x-backend: &backend
+  build: .
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-placeiq}:${POSTGRES_PASSWORD:-placeiq}@postgres:5432/${POSTGRES_DB:-placeiq}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_TASK_ALWAYS_EAGER: "false"
+  volumes:
+    - ./app:/srv/app   # live code reload in development
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-placeiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-placeiq}
+      POSTGRES_DB: ${POSTGRES_DB:-placeiq}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    <<: *backend
+    command: flask --app run:app run --host 0.0.0.0 --port 5000 --debug
+    ports:
+      - "5000:5000"
+
+  worker:
+    <<: *backend
+    command: celery -A app.tasks.worker worker --loglevel=info
+
+  beat:
+    <<: *backend
+    command: celery -A app.tasks.worker beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://api:5000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/srv/src
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

@@ -1,0 +1,9 @@
+.git
+.env
+.claude
+**/__pycache__
+*.db
+*.log
+*.pdf
+frontend
+sql
