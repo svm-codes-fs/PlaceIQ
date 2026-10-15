@@ -42,11 +42,13 @@ def create_app(config_name='default'):
     from app.routes.admin import admin_bp
     from app.routes.student import student_bp
     from app.routes.reports import reports_bp
+    from app.routes.api import api_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(student_bp, url_prefix='/student')
     app.register_blueprint(reports_bp, url_prefix='/reports')
+    app.register_blueprint(api_bp, url_prefix='/api')
 
     # Create tables and seed admin if not exists
     with app.app_context():
