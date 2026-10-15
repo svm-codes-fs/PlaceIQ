@@ -1,14 +1,22 @@
+"""College admin endpoints. Every query here is limited to the admin's college by app/tenancy.py."""
 from flask import jsonify, request
 
-from app.api import api_bp, role_required
+from app.api import api_bp
+from app.api.serializers import application_json, company_json, student_json
 from app.extensions import db
-from app.models import Student, Company, Application, Result
+from app.models import Application, Company, Student
+from app.security import roles_required
 from app.services import reports
-from app.services.applications import ApplicationError, update_status
+from app.services.accounts import create_student, update_student
+from app.services.applications import allowed_transitions, transition
+from app.services.companies import create_company, eligible_students, update_company
+from app.tenancy import current_college_id
+
+admin_only = roles_required('college_admin')
 
 
 @api_bp.route('/admin/dashboard', methods=['GET'])
-@role_required('admin')
+@admin_only
 def admin_dashboard():
     recent_apps = Application.query.order_by(Application.applied_date.desc()).limit(5).all()
     recent = [{
@@ -18,83 +26,108 @@ def admin_dashboard():
         'status': a.status,
         'date': a.applied_date.isoformat()
     } for a in recent_apps]
+    return jsonify({'stats': reports.overview_stats(), 'funnel': reports.status_funnel(),
+                    'recent_applications': recent})
 
-    return jsonify({'stats': reports.overview_stats(), 'recent_applications': recent})
 
+# ---- Students ---------------------------------------------------------------
 
 @api_bp.route('/admin/students', methods=['GET'])
-@role_required('admin')
+@admin_only
 def admin_students():
-    return jsonify([{
-        'id': s.id,
-        'roll_no': s.roll_no,
-        'name': s.name,
-        'email': s.email,
-        'branch': s.branch,
-        'cgpa': float(s.cgpa),
-        'backlogs': s.backlogs,
-        'placement_status': s.placement_status
-    } for s in Student.query.all()])
+    return jsonify([student_json(s) for s in Student.query.order_by(Student.roll_no).all()])
 
+
+@api_bp.route('/admin/students', methods=['POST'])
+@admin_only
+def admin_create_student():
+    student = create_student(current_college_id(), request.get_json() or {})
+    return jsonify(student_json(student)), 201
+
+
+@api_bp.route('/admin/students/<int:student_id>', methods=['PUT'])
+@admin_only
+def admin_update_student(student_id):
+    student = update_student(db.get_or_404(Student, student_id), request.get_json() or {})
+    return jsonify(student_json(student))
+
+
+@api_bp.route('/admin/students/<int:student_id>', methods=['DELETE'])
+@admin_only
+def admin_delete_student(student_id):
+    student = db.get_or_404(Student, student_id)
+    db.session.delete(student.user)  # cascades to the profile and applications
+    db.session.commit()
+    return jsonify({'message': f'Deleted {student.name}.'})
+
+
+# ---- Companies --------------------------------------------------------------
 
 @api_bp.route('/admin/companies', methods=['GET'])
-@role_required('admin')
+@admin_only
 def admin_companies():
-    return jsonify([{
-        'id': c.id,
-        'name': c.name,
-        'role_offered': c.role_offered,
-        'package_lpa': float(c.package_lpa),
-        'status': c.status,
-        'visit_date': c.visit_date.isoformat() if c.visit_date else None,
-        'min_cgpa': float(c.min_cgpa)
-    } for c in Company.query.all()])
+    return jsonify([company_json(c) for c in Company.query.order_by(Company.visit_date).all()])
 
+
+@api_bp.route('/admin/companies', methods=['POST'])
+@admin_only
+def admin_create_company():
+    return jsonify(company_json(create_company(request.get_json() or {}))), 201
+
+
+@api_bp.route('/admin/companies/<int:company_id>', methods=['PUT'])
+@admin_only
+def admin_update_company(company_id):
+    company = update_company(db.get_or_404(Company, company_id), request.get_json() or {})
+    return jsonify(company_json(company))
+
+
+@api_bp.route('/admin/companies/<int:company_id>', methods=['DELETE'])
+@admin_only
+def admin_delete_company(company_id):
+    company = db.get_or_404(Company, company_id)
+    db.session.delete(company)
+    db.session.commit()
+    return jsonify({'message': f'Deleted {company.name}.'})
+
+
+@api_bp.route('/admin/companies/<int:company_id>/eligible', methods=['GET'])
+@admin_only
+def admin_company_eligible(company_id):
+    company = db.get_or_404(Company, company_id)
+    return jsonify({'company': company_json(company),
+                    'students': [student_json(s) for s in eligible_students(company)]})
+
+
+# ---- Applications -----------------------------------------------------------
 
 @api_bp.route('/admin/applications', methods=['GET'])
-@role_required('admin')
+@admin_only
 def admin_applications():
-    return jsonify([{
-        'id': a.id,
-        'student_name': a.student.name,
-        'student_roll': a.student.roll_no,
-        'company_name': a.company.name,
-        'role_offered': a.company.role_offered,
-        'status': a.status,
-        'applied_date': a.applied_date.isoformat(),
-        'result': a.result.result if a.result else None
-    } for a in Application.query.all()])
+    apps = Application.query.order_by(Application.applied_date.desc()).all()
+    return jsonify([application_json(a, allowed_transitions(a, 'admin')) for a in apps])
 
 
 @api_bp.route('/admin/applications/<int:app_id>/status', methods=['POST'])
-@role_required('admin')
+@admin_only
 def update_application_status(app_id):
-    data = request.get_json() or {}
     application = db.get_or_404(Application, app_id)
-    try:
-        update_status(application, data.get('status'))
-    except ApplicationError as e:
-        return jsonify({'error': e.message}), 400
-    return jsonify({'message': 'Status updated successfully'})
+    transition(application, (request.get_json() or {}).get('status'), actor='admin')
+    return jsonify({'message': 'Status updated successfully',
+                    'application': application_json(application, allowed_transitions(application, 'admin'))})
 
 
 @api_bp.route('/admin/results', methods=['GET'])
-@role_required('admin')
+@admin_only
 def admin_results():
-    return jsonify([{
-        'id': r.id,
-        'student_name': r.application.student.name,
-        'student_roll': r.application.student.roll_no,
-        'branch': r.application.student.branch,
-        'company_name': r.application.company.name,
-        'role_offered': r.application.company.role_offered,
-        'package_lpa': float(r.application.company.package_lpa),
-        'offer_date': r.offer_date.isoformat() if r.offer_date else None
-    } for r in Result.query.filter_by(result='Selected').all()])
+    """Offers made: accepted, pending and declined."""
+    apps = (Application.query.filter(Application.status.in_(('Offered', 'Accepted', 'Declined')))
+            .order_by(Application.offer_date.desc()).all())
+    return jsonify([application_json(a) for a in apps])
 
 
 @api_bp.route('/admin/reports', methods=['GET'])
-@role_required('admin')
+@admin_only
 def admin_reports():
     stats = reports.overview_stats()
     return jsonify({

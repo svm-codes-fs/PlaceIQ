@@ -1,21 +1,33 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, Circle } from "lucide-react";
+import { api } from "@/utils/api";
+import { Alert, errorMessage } from "@/components/ui/Form";
 
 const PIPELINE_STAGES = ['Applied', 'Shortlisted', 'Interview', 'Offered'];
 
 export function StudentApplications() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [responding, setResponding] = useState(null);
+  const [message, setMessage] = useState(null);
 
-  useEffect(() => {
-    fetch("/api/student/applications")
-      .then(res => res.json())
-      .then(data => {
-        setApplications(data);
-        setLoading(false);
-      });
-  }, []);
+  const load = () => api.get("/student/applications").then(setApplications).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
+
+  const respond = async (app, status) => {
+    if (status === "Accepted" && !window.confirm(`Accept the offer from ${app.company_name}? This marks you as placed.`)) return;
+    setResponding(app.id);
+    setMessage(null);
+    try {
+      const data = await api.post(`/student/applications/${app.id}/respond`, { status });
+      setMessage({ type: "success", text: data.message });
+      await load();
+    } catch (err) {
+      setMessage({ type: "error", ...errorMessage(err) });
+    }
+    setResponding(null);
+  };
 
   const getStageIndex = (status) => PIPELINE_STAGES.indexOf(status);
 
@@ -32,6 +44,7 @@ export function StudentApplications() {
       </header>
 
       <div className="space-y-6">
+        {message && <Alert type={message.type} items={message.items}>{message.text}</Alert>}
         {loading ? (
           [1, 2].map(i => <div key={i} className="h-48 bg-white/5 rounded-3xl animate-pulse" />)
         ) : applications.length === 0 ? (
@@ -44,7 +57,9 @@ export function StudentApplications() {
           applications.map((app, i) => {
             const stageIdx = getStageIndex(app.status);
             const isRejected = app.status === 'Rejected';
+            const isDeclined = app.status === 'Declined';
             const isOffered = app.status === 'Offered';
+            const isAccepted = app.status === 'Accepted';
 
             return (
               <motion.div
@@ -53,7 +68,7 @@ export function StudentApplications() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 className={`glass-panel border rounded-3xl p-8 transition-all duration-500
-                  ${isOffered ? 'border-success/30 shadow-[0_0_40px_-15px_rgba(16,185,129,0.25)]' :
+                  ${(isOffered || isAccepted) ? 'border-success/30 shadow-[0_0_40px_-15px_rgba(16,185,129,0.25)]' :
                     isRejected ? 'border-danger/20' : 'border-white/5'}
                 `}
               >
@@ -61,7 +76,7 @@ export function StudentApplications() {
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-5">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl text-white border transition-colors
-                      ${isOffered ? 'bg-success/20 border-success/30' : isRejected ? 'bg-danger/10 border-danger/20' : 'bg-white/5 border-white/5'}
+                      ${(isOffered || isAccepted) ? 'bg-success/20 border-success/30' : isRejected ? 'bg-danger/10 border-danger/20' : 'bg-white/5 border-white/5'}
                     `}>
                       {app.company_name.charAt(0)}
                     </div>
@@ -72,7 +87,7 @@ export function StudentApplications() {
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1">Package</p>
-                    <p className={`text-xl font-semibold ${isOffered ? 'text-success' : 'text-white'}`}>₹{app.package_lpa} LPA</p>
+                    <p className={`text-xl font-semibold ${(isOffered || isAccepted) ? 'text-success' : 'text-white'}`}>₹{app.package_lpa} LPA</p>
                   </div>
                 </div>
 
@@ -82,10 +97,36 @@ export function StudentApplications() {
                     <span className="w-2 h-2 rounded-full bg-danger shrink-0" />
                     <p className="text-sm font-bold text-danger uppercase tracking-widest">Application Not Progressed</p>
                   </div>
-                ) : isOffered ? (
+                ) : isDeclined ? (
+                  <div className="flex items-center gap-3 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl">
+                    <span className="w-2 h-2 rounded-full bg-gray-500 shrink-0" />
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Offer Declined</p>
+                  </div>
+                ) : isAccepted ? (
                   <div className="flex items-center gap-3 px-5 py-4 bg-success/10 border border-success/20 rounded-2xl">
                     <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
-                    <p className="text-sm font-bold text-success uppercase tracking-widest">Offer Received — Congratulations!</p>
+                    <p className="text-sm font-bold text-success uppercase tracking-widest">Offer Accepted — You're Placed!</p>
+                  </div>
+                ) : isOffered ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 bg-success/10 border border-success/20 rounded-2xl">
+                    <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+                    <p className="flex-1 text-sm font-bold text-success uppercase tracking-widest">Offer Received — Congratulations!</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => respond(app, "Declined")}
+                        disabled={responding === app.id}
+                        className="px-4 py-2 rounded-xl border border-white/10 text-xs font-bold text-gray-300 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        onClick={() => respond(app, "Accepted")}
+                        disabled={responding === app.id}
+                        className="px-4 py-2 rounded-xl bg-success text-xs font-bold text-white hover:bg-success/90 disabled:opacity-50"
+                      >
+                        Accept offer
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">

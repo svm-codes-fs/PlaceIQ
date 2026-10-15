@@ -1,13 +1,13 @@
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
 
 export function AppLayout({ user, onLogout }) {
-  if (!user) return null;
-  
+  if (!user) return <Navigate to="/login" replace />;
+
   return (
     <div className="flex h-screen bg-background overflow-hidden selection:bg-primary/30">
-      <Sidebar role={user.role} onLogout={onLogout} />
+      <Sidebar user={user} onLogout={onLogout} />
       
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Global Aurora Background */}

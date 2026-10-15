@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Hexagon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { api, HOME } from "@/utils/api";
 
 export function Login({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -16,24 +17,13 @@ export function Login({ onLogin }) {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        onLogin(data.user);
-        navigate(data.user.role === 'admin' ? '/admin' : '/student');
-      } else {
-        setError(data.error || "Invalid credentials");
-      }
+      const data = await api.post("/auth/login", { username, password });
+      onLogin(data.user);
+      navigate(HOME[data.user.role]);
     } catch (err) {
-      setError("An error occurred during login.");
+      setError(err.message || "An error occurred during login.");
     }
-    
+
     setLoading(false);
   };
 
@@ -58,9 +48,9 @@ export function Login({ onLogin }) {
         >
           <div className="flex items-center gap-3">
             <Hexagon className="w-8 h-8 text-white fill-white/10" />
-            <h1 className="font-bold text-xl tracking-[0.2em] text-white">PMS</h1>
+            <h1 className="font-bold text-xl tracking-[0.2em] text-white">PLACEIQ</h1>
           </div>
-          <p className="text-[10px] uppercase tracking-widest text-white/50 ml-[2.75rem] font-bold">Placement Management System</p>
+          <p className="text-[10px] uppercase tracking-widest text-white/50 ml-[2.75rem] font-bold">Campus Recruitment Platform</p>
         </motion.div>
 
         <motion.div 
@@ -106,21 +96,25 @@ export function Login({ onLogin }) {
             )}
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/70 tracking-widest uppercase ml-1">Username</label>
+              <label htmlFor="login-username" className="text-[11px] font-bold text-white/70 tracking-widest uppercase ml-1">Username or email</label>
               <input
+                id="login-username"
                 type="text"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full bg-[#12121A]/50 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all placeholder:text-white/30 text-sm font-medium"
-                placeholder="Enter your university ID"
+                placeholder="e.g. aarav_tiet"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/70 tracking-widest uppercase ml-1">Password</label>
+              <label htmlFor="login-password" className="text-[11px] font-bold text-white/70 tracking-widest uppercase ml-1">Password</label>
               <input
+                id="login-password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-[#12121A]/50 border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all placeholder:text-white/30 text-sm font-medium tracking-widest"
@@ -138,6 +132,11 @@ export function Login({ onLogin }) {
               <ArrowRight className="w-5 h-5" />
             </button>
           </form>
+
+          <p className="mt-8 text-center text-sm text-white/50">
+            New student?{" "}
+            <Link to="/register" className="font-bold text-[#a78bfa] hover:text-white transition-colors">Create an account</Link>
+          </p>
         </motion.div>
       </div>
 

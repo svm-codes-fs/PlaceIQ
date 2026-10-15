@@ -1,4 +1,6 @@
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
+
+const ROLE_LABELS = { student: "Student", college_admin: "College Admin", super_admin: "Super Admin" };
 
 export function Navbar({ user }) {
   return (
@@ -15,15 +17,13 @@ export function Navbar({ user }) {
       </div>
       
       <div className="flex items-center gap-6">
-        <button className="text-gray-400 hover:text-white transition-colors relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute 0 right-0 w-2 h-2 bg-primary rounded-full border border-background"></span>
-        </button>
         
-        <div className="flex items-center gap-3 pl-6 border-l border-white/10 cursor-pointer group">
+        <div className="flex items-center gap-3 group">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-white leading-none tracking-wide">{user?.username}</p>
-            <p className="text-xs text-primaryLight uppercase tracking-widest mt-1.5">{user?.role}</p>
+            <p className="text-xs text-primaryLight uppercase tracking-widest mt-1.5">
+              {ROLE_LABELS[user?.role]}{user?.college ? ` · ${user.college.code}` : ""}
+            </p>
           </div>
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center font-bold text-sm shadow-[0_0_15px_-3px_rgba(124,58,237,0.5)] group-hover:scale-105 transition-transform">
             {user?.username?.charAt(0).toUpperCase() || 'U'}

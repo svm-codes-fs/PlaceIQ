@@ -1,20 +1,23 @@
 """
-Placement Management System — Flask Application Factory
+PlaceIQ — Flask Application Factory
 
 Layout:
     app/api/       JSON REST API used by the React frontend
-    app/services/  business logic (eligibility, application workflow, reports)
-    app/models/    SQLAlchemy models
+    app/services/  business logic (eligibility, application workflow, accounts, reports)
+    app/models/    SQLAlchemy models (schema managed by Alembic in migrations/)
     app/tasks/     Celery background tasks
-    app/web/       legacy server-rendered Jinja pages (removed in Phase 1)
+    app/tenancy.py per-college data isolation
+    app/security.py JWT authentication
 """
 import os
 
 from flask import Flask
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
-from app.extensions import db, login_manager, migrate
+from app.extensions import db, jwt, migrate
 
-__all__ = ['create_app', 'db', 'login_manager', 'migrate']
+__all__ = ['create_app', 'db']
 
 
 def create_app(config_name=None):
@@ -28,60 +31,30 @@ def create_app(config_name=None):
 
     # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, render_as_batch=True)  # batch mode lets SQLite alter tables
+    jwt.init_app(app)
 
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Please log in to access this page.'
-    login_manager.login_message_category = 'warning'
+    from app import models, security  # noqa: F401  (register models and JWT callbacks)
+    from app.tenancy import init_tenancy
+    init_tenancy()
 
-    # Import models (so they are registered with SQLAlchemy)
-    from app import models
-
-    # User loader for Flask-Login
-    @login_manager.user_loader
-    def load_user(user_id):
-        return db.session.get(models.User, int(user_id))
-
-    # Register blueprints
-    from app.web.auth import auth_bp
-    from app.web.admin import admin_bp
-    from app.web.student import student_bp
-    from app.web.reports import reports_bp
     from app.api import api_bp
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(student_bp, url_prefix='/student')
-    app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(api_bp, url_prefix='/api')
 
     # Background jobs
     from app.tasks import celery_init_app
     celery_init_app(app)
 
-    # Create tables and seed admin if not exists
-    # (replaced by Alembic migrations in Phase 1)
-    with app.app_context():
-        db.create_all()
-        _seed_admin(app)
+    from app.cli import register_cli
+    register_cli(app)
 
     return app
 
 
-def _seed_admin(app):
-    """Create the default admin user if it doesn't exist."""
-    from app.models import User
-    from werkzeug.security import generate_password_hash
-
-    username = app.config['ADMIN_USERNAME']
-    admin = User.query.filter_by(username=username).first()
-    if not admin:
-        admin = User(
-            username=username,
-            email=app.config['ADMIN_EMAIL'],
-            password_hash=generate_password_hash(app.config['ADMIN_PASSWORD']),
-            role='admin'
-        )
-        db.session.add(admin)
-        db.session.commit()
+@event.listens_for(Engine, 'connect')
+def _sqlite_foreign_keys(dbapi_connection, _record):
+    """SQLite ignores foreign keys (and ON DELETE CASCADE) unless switched on per connection."""
+    if type(dbapi_connection).__module__.startswith('sqlite3'):
+        cursor = dbapi_connection.cursor()
+        cursor.execute('PRAGMA foreign_keys=ON')
+        cursor.close()

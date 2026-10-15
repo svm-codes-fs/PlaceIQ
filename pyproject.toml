@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["migrations"]
+
+[tool.coverage.run]
+omit = ["app/tasks/worker.py"]

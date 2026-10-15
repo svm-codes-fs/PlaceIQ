@@ -1,34 +1,39 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, CheckCircle2, FileText } from "lucide-react";
+import { Search, FileText } from "lucide-react";
+import { api } from "@/utils/api";
+import { Alert } from "@/components/ui/Form";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
-const STATUSES = ['Applied', 'Shortlisted', 'Interview', 'Offered', 'Rejected'];
+// Button label for each move the state machine allows
+const ACTION_LABELS = {
+  Shortlisted: "Shortlist",
+  Interview: "Move to interview",
+  Offered: "Make offer",
+  Rejected: "Reject",
+};
 
 export function AdminApplications() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updating, setUpdating] = useState(null);
+  const [error, setError] = useState(null);
+
+  const fetchApplications = () =>
+    api.get("/admin/applications").then(setApplications).finally(() => setLoading(false));
 
   useEffect(() => { fetchApplications(); }, []);
 
-  const fetchApplications = () => {
-    fetch("/api/admin/applications")
-      .then((res) => res.json())
-      .then((data) => { setApplications(data); setLoading(false); });
-  };
-
-  const handleStatusChange = async (appId, newStatus) => {
-    setUpdating(appId);
+  const handleStatusChange = async (app, newStatus) => {
+    if (newStatus === "Rejected" && !window.confirm(`Reject ${app.student_name} for ${app.company_name}? This can't be undone.`)) return;
+    setUpdating(app.id);
+    setError(null);
     try {
-      const res = await fetch(`/api/admin/applications/${appId}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) fetchApplications();
+      const data = await api.post(`/admin/applications/${app.id}/status`, { status: newStatus });
+      setApplications((prev) => prev.map((a) => (a.id === app.id ? data.application : a)));
     } catch (err) {
-      console.error("Failed to update status");
+      setError(err.message);
     } finally {
       setUpdating(null);
     }
@@ -50,7 +55,7 @@ export function AdminApplications() {
             APPLICATION <span className="text-gradient">PIPELINE.</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {applications.length} total · {applications.filter(a => a.result === 'Selected').length} placed
+            {applications.length} total · {applications.filter(a => a.status === 'Accepted').length} placed
           </p>
         </div>
         <div className="relative">
@@ -64,6 +69,8 @@ export function AdminApplications() {
           />
         </div>
       </header>
+
+      {error && <Alert>{error}</Alert>}
 
       {/* Table */}
       <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden">
@@ -85,7 +92,8 @@ export function AdminApplications() {
                   <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Student</th>
                   <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Company & Role</th>
                   <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Applied</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Pipeline Status</th>
+                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Status</th>
+                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Next step</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -116,34 +124,27 @@ export function AdminApplications() {
                       {new Date(app.applied_date).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3.5">
-                      {app.result === 'Selected' ? (
-                        <div className="flex items-center gap-2 text-success">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">Placed</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 w-fit">
-                          {STATUSES.map(s => {
-                            const isActive = app.status === s;
-                            return (
-                              <button
-                                key={s}
-                                onClick={() => handleStatusChange(app.id, s)}
-                                className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap
-                                  ${isActive
-                                    ? s === 'Rejected'
-                                      ? 'bg-danger text-white shadow-md'
-                                      : 'bg-gradient-to-r from-[#7C3AED] to-[#2563EB] text-white shadow-md'
-                                    : 'text-gray-500 hover:text-white hover:bg-white/10'
-                                  }
-                                `}
-                              >
-                                {s}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <StatusBadge status={app.status} />
+                      {app.status === 'Offered' && (
+                        <p className="mt-1 text-[10px] text-gray-600">Waiting for the student to respond</p>
                       )}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-wrap gap-1.5">
+                        {app.allowed_transitions.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => handleStatusChange(app, s)}
+                            className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap border
+                              ${s === 'Rejected'
+                                ? 'border-danger/30 text-danger hover:bg-danger/10'
+                                : 'border-primary/40 bg-primary/10 text-white hover:bg-primary/30'}`}
+                          >
+                            {ACTION_LABELS[s] || s}
+                          </button>
+                        ))}
+                        {app.allowed_transitions.length === 0 && <span className="text-[10px] text-gray-700">—</span>}
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

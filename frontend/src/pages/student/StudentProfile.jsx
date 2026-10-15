@@ -1,22 +1,22 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, User, Phone, GraduationCap, FileDigit } from "lucide-react";
+import { CheckCircle2, User, Phone } from "lucide-react";
+import { api } from "@/utils/api";
 
 export function StudentProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', cgpa: '', backlogs: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '' });
 
   useEffect(() => {
-    fetch("/api/student/profile")
-      .then(res => res.json())
+    api.get("/student/profile")
       .then(data => {
         setProfile(data);
-        setFormData({ name: data.name, phone: data.phone, cgpa: data.cgpa, backlogs: data.backlogs });
-        setLoading(false);
-      });
+        setFormData({ name: data.name, phone: data.phone });
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -26,21 +26,16 @@ export function StudentProfile() {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/student/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      setMessage({ type: res.ok ? 'success' : 'error', text: data.message || data.error });
-      if (res.ok) setProfile({ ...profile, ...formData });
-    } catch {
-      setMessage({ type: 'error', text: "Failed to update profile." });
+      const data = await api.put("/student/profile", formData);
+      setMessage({ type: 'success', text: data.message });
+      setProfile(data.profile);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || "Failed to update profile." });
     }
     setSaving(false);
   };
 
-  if (loading) {
+  if (loading || !profile) {
     return <div className="max-w-6xl mx-auto py-24 text-center animate-pulse text-gray-500">Loading profile...</div>;
   }
 
@@ -52,7 +47,7 @@ export function StudentProfile() {
           MY PROFILE.
         </h1>
         <p className="text-lg text-gray-400 font-light max-w-lg leading-relaxed">
-          Keep your academic details current to ensure maximum eligibility.
+          Your academic record decides which drives you can apply to.
         </p>
       </header>
 
@@ -82,6 +77,8 @@ export function StudentProfile() {
             <h4 className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase">Academic Details</h4>
             <InfoRow label="Roll No." value={profile.roll_no} />
             <InfoRow label="Branch" value={profile.branch} />
+            <InfoRow label="CGPA" value={profile.cgpa.toFixed(2)} />
+            <InfoRow label="Active Backlogs" value={profile.backlogs} />
             <InfoRow label="Email" value={profile.email} />
           </div>
         </div>
@@ -90,7 +87,7 @@ export function StudentProfile() {
         <div className="md:col-span-2">
           <div className="glass-panel border border-white/5 rounded-3xl p-8">
             <h3 className="text-lg font-bold text-white mb-2">Update Information</h3>
-            <p className="text-sm text-gray-500 mb-8">Changes to CGPA and backlogs affect your eligibility for recruitment drives.</p>
+            <p className="text-sm text-gray-500 mb-8">Update your contact details. CGPA and backlogs are maintained by your placement office — contact them if your record is out of date.</p>
 
             {message && (
               <div className={`mb-8 p-4 rounded-2xl border text-sm font-bold flex items-center gap-3
@@ -106,23 +103,19 @@ export function StudentProfile() {
                 {[
                   { name: 'name', label: 'Full Name', icon: User, type: 'text', placeholder: 'Your full name' },
                   { name: 'phone', label: 'Phone Number', icon: Phone, type: 'text', placeholder: 'e.g. 9876543210' },
-                  { name: 'cgpa', label: 'Current CGPA', icon: GraduationCap, type: 'number', placeholder: '0.00 – 10.00', step: '0.01', min: '0', max: '10' },
-                  { name: 'backlogs', label: 'Active Backlogs', icon: FileDigit, type: 'number', placeholder: '0', min: '0' },
                 ].map(field => (
                   <div key={field.name} className="space-y-2">
-                    <label className="text-[11px] font-bold text-gray-500 tracking-widest uppercase flex items-center gap-2">
+                    <label htmlFor={`profile-${field.name}`} className="text-[11px] font-bold text-gray-500 tracking-widest uppercase flex items-center gap-2">
                       <field.icon className="w-3 h-3" /> {field.label}
                     </label>
                     <input
+                      id={`profile-${field.name}`}
                       type={field.type}
                       name={field.name}
                       value={formData[field.name]}
                       onChange={handleChange}
                       placeholder={field.placeholder}
-                      step={field.step}
-                      min={field.min}
-                      max={field.max}
-                      required={field.name === 'name' || field.name === 'cgpa' || field.name === 'backlogs'}
+                      required={field.name === 'name'}
                       className="w-full bg-white/5 border border-white/5 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-gray-600 text-sm font-medium"
                     />
                   </div>

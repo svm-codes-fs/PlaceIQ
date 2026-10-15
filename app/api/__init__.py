@@ -1,26 +1,39 @@
 """
 JSON REST API used by the React frontend, mounted at /api.
-"""
-from functools import wraps
 
+    /api/auth/*     login, refresh, logout, register (public)
+    /api/student/*  student role
+    /api/admin/*    college_admin role, scoped to their college
+    /api/super/*    super_admin role, manages colleges
+"""
 from flask import Blueprint, jsonify
-from flask_login import login_required, current_user
+
+from app.services.accounts import ValidationError
+from app.services.applications import ApplicationError
+from app.tenancy import TenantViolation
 
 api_bp = Blueprint('api', __name__)
 
 
-def role_required(role):
-    """Require a logged-in user with the given role."""
-    def decorator(view):
-        @wraps(view)
-        @login_required
-        def wrapped(*args, **kwargs):
-            if current_user.role != role:
-                return jsonify({'error': 'Unauthorized'}), 403
-            return view(*args, **kwargs)
-        return wrapped
-    return decorator
+@api_bp.errorhandler(ValidationError)
+def _validation_error(e):
+    return jsonify({'error': e.errors[0], 'errors': e.errors}), 400
+
+
+@api_bp.errorhandler(ApplicationError)
+def _application_error(e):
+    return jsonify({'error': e.message, 'reasons': e.reasons}), 400
+
+
+@api_bp.errorhandler(TenantViolation)
+def _tenant_violation(_e):
+    return jsonify({'error': 'Not found'}), 404
+
+
+@api_bp.errorhandler(404)
+def _not_found(_e):
+    return jsonify({'error': 'Not found'}), 404
 
 
 # Register routes on api_bp
-from app.api import auth, student, admin  # noqa: E402,F401
+from app.api import auth, student, admin, superadmin  # noqa: E402,F401

@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Briefcase, FileText, Trophy, BarChart, User, LogOut, Hexagon } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, Trophy, BarChart, User, LogOut, Hexagon, Building2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { motion } from "framer-motion";
+import { HOME } from "@/utils/api";
 
 const NAV_SECTIONS = {
   student: [
@@ -15,7 +16,7 @@ const NAV_SECTIONS = {
     },
     { title: "ACCOUNT", items: [{ name: "Profile", path: "/student/profile", icon: User }] }
   ],
-  admin: [
+  college_admin: [
     { title: "OVERVIEW", items: [{ name: "Dashboard", path: "/admin", icon: LayoutDashboard }] },
     {
       title: "PLACEMENT",
@@ -32,11 +33,15 @@ const NAV_SECTIONS = {
       ]
     },
     { title: "ANALYTICS", items: [{ name: "Reports", path: "/admin/reports", icon: BarChart }] }
+  ],
+  super_admin: [
+    { title: "PLATFORM", items: [{ name: "Colleges", path: "/super", icon: Building2 }] }
   ]
 };
 
-export function Sidebar({ role = "student", onLogout }) {
+export function Sidebar({ user, onLogout }) {
   const location = useLocation();
+  const role = user.role;
   const sections = NAV_SECTIONS[role] || [];
 
   return (
@@ -48,8 +53,10 @@ export function Sidebar({ role = "student", onLogout }) {
       <div className="px-5 py-5 flex items-center gap-2.5 relative z-10 border-b border-white/5">
         <Hexagon className="w-5 h-5 text-primary fill-primary/20" />
         <div>
-          <h1 className="font-bold text-xs tracking-[0.2em] text-white">PMS</h1>
-          <p className="text-[9px] text-gray-600 tracking-widest uppercase font-bold leading-none mt-0.5">Placement System</p>
+          <h1 className="font-bold text-xs tracking-[0.2em] text-white">PLACEIQ</h1>
+          <p className="text-[9px] text-gray-600 tracking-widest uppercase font-bold leading-none mt-0.5">
+            {user.college ? user.college.code : "Platform Admin"}
+          </p>
         </div>
       </div>
 
@@ -60,7 +67,7 @@ export function Sidebar({ role = "student", onLogout }) {
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path ||
-                  (item.path !== `/${role}` && location.pathname.startsWith(item.path));
+                  (item.path !== HOME[role] && location.pathname.startsWith(item.path));
                 return (
                   <Link
                     key={item.path}

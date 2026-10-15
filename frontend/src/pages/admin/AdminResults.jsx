@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Download, Trophy } from "lucide-react";
+import { api } from "@/utils/api";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export function AdminResults() {
   const [results, setResults] = useState([]);
@@ -8,15 +10,28 @@ export function AdminResults() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/results")
-      .then(res => res.json())
-      .then(data => { setResults(data); setLoading(false); });
+    api.get("/admin/results")
+      .then(setResults)
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = results.filter(r =>
     r.student_name.toLowerCase().includes(search.toLowerCase()) ||
     r.company_name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const exportCsv = () => {
+    const cols = ["student_name", "student_roll", "branch", "company_name", "role_offered", "package_lpa", "offer_date", "status"];
+    const quote = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [cols.join(","), ...filtered.map((r) => cols.map((c) => quote(r[c])).join(","))].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const link = Object.assign(document.createElement("a"), { href: url, download: "placement-results.csv" });
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const accepted = results.filter((r) => r.status === "Accepted").length;
 
   return (
     <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
@@ -29,7 +44,7 @@ export function AdminResults() {
             PLACEMENT <span className="text-gradient">OUTCOMES.</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {results.length} students have received offers
+            {results.length} offers made · {accepted} accepted
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -43,7 +58,11 @@ export function AdminResults() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/5 text-white font-bold text-xs tracking-wide rounded-xl hover:bg-white/10 transition-colors">
+          <button
+            onClick={exportCsv}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/5 text-white font-bold text-xs tracking-wide rounded-xl hover:bg-white/10 transition-colors disabled:opacity-40"
+          >
             <Download className="w-3.5 h-3.5" /> Export
           </button>
         </div>
@@ -105,9 +124,7 @@ export function AdminResults() {
                       <span className="text-success font-bold text-sm">₹{res.package_lpa} <span className="text-xs text-success/60 font-medium">LPA</span></span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-success/20 text-success border border-success/30 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                        ✓ Selected
-                      </span>
+                      <StatusBadge status={res.status} />
                     </td>
                   </motion.tr>
                 ))}

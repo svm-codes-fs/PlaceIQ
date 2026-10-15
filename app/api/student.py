@@ -1,152 +1,96 @@
 from flask import jsonify, request
-from flask_login import current_user
+from flask_jwt_extended import current_user
 
-from app.api import api_bp, role_required
+from app.api import api_bp
+from app.api.serializers import application_json, company_json, student_json
 from app.extensions import db
-from app.models import Company, Application
-from app.services.applications import ApplicationError, apply_to_company
-from app.services.eligibility import eligibility_failures, is_eligible
+from app.models import Application, Company
+from app.security import roles_required
+from app.services.accounts import update_student
+from app.services.applications import allowed_transitions, apply_to_company, transition
+from app.services.eligibility import eligibility_failures
 
 
-def _current_student():
+def _student():
     return current_user.student
 
 
 @api_bp.route('/student/dashboard', methods=['GET'])
-@role_required('student')
+@roles_required('student')
 def student_dashboard():
-    student = _current_student()
-    if not student:
-        return jsonify({'error': 'Student profile not found'}), 404
-
-    applications = Application.query.filter_by(student_id=student.id).all()
+    student = _student()
+    applications = student.applications
     applied_ids = {a.company_id for a in applications}
 
-    # Upcoming drives the student is eligible for
-    upcoming_drives = [{
-        'id': c.id,
-        'name': c.name,
-        'role_offered': c.role_offered,
-        'package_lpa': float(c.package_lpa),
-        'visit_date': c.visit_date.isoformat() if c.visit_date else None,
-        'has_applied': c.id in applied_ids
-    } for c in Company.query.filter_by(status='Upcoming').all() if is_eligible(student, c)]
+    # Upcoming drives the student is eligible for and hasn't applied to yet
+    upcoming = [
+        {**company_json(c), 'branches': ', '.join(c.get_branches_list())}
+        for c in Company.query.filter_by(status='Upcoming').order_by(Company.visit_date).all()
+        if c.id not in applied_ids and not eligibility_failures(student, c)
+    ]
 
     return jsonify({
-        'student': {
-            'name': student.name,
-            'placement_status': student.placement_status,
-            'cgpa': float(student.cgpa),
-            'branch': student.branch
+        'student': student_json(student),
+        'application_stats': {
+            'total': len(applications),
+            'interview': sum(1 for a in applications if a.status == 'Interview'),
+            'offered': sum(1 for a in applications if a.status in ('Offered', 'Accepted')),
         },
-        'stats': {
-            'applications': len(applications),
-            'interviews': sum(1 for a in applications if a.status == 'Interview'),
-            'offers': sum(1 for a in applications
-                          if a.status == 'Offered' or (a.result and a.result.result == 'Selected'))
-        },
-        'upcoming_drives': upcoming_drives[:3]  # Limit to 3 for dashboard
+        'upcoming_drives': upcoming[:3],
     })
 
 
 @api_bp.route('/student/companies', methods=['GET'])
-@role_required('student')
+@roles_required('student')
 def student_companies():
-    student = _current_student()
-    statuses = {a.company_id: a.status for a in Application.query.filter_by(student_id=student.id).all()}
+    student = _student()
+    statuses = {a.company_id: a.status for a in student.applications}
 
     result = []
-    for c in Company.query.all():
+    for c in Company.query.order_by(Company.visit_date).all():
         failures = eligibility_failures(student, c)
         result.append({
-            'id': c.id,
-            'name': c.name,
-            'description': c.description,
-            'role_offered': c.role_offered,
-            'package_lpa': float(c.package_lpa),
-            'min_cgpa': float(c.min_cgpa),
-            'max_backlogs': c.max_backlogs,
-            'allowed_branches': c.allowed_branches,
-            'visit_date': c.visit_date.isoformat() if c.visit_date else None,
-            'status': c.status,
+            **company_json(c),
             'is_eligible': not failures,
             'ineligibility_reasons': failures,
-            'application_status': statuses.get(c.id)
+            'application_status': statuses.get(c.id),
         })
     return jsonify(result)
 
 
 @api_bp.route('/student/apply/<int:company_id>', methods=['POST'])
-@role_required('student')
+@roles_required('student')
 def student_apply(company_id):
     company = db.get_or_404(Company, company_id)
-    try:
-        apply_to_company(_current_student(), company)
-    except ApplicationError as e:
-        return jsonify({'error': e.message, 'reasons': e.reasons}), 400
-    return jsonify({'message': f'Successfully applied to {company.name}'})
+    apply_to_company(_student(), company)
+    return jsonify({'message': f'Successfully applied to {company.name}'}), 201
 
 
 @api_bp.route('/student/applications', methods=['GET'])
-@role_required('student')
+@roles_required('student')
 def student_applications():
-    student = _current_student()
-    result = []
-    for a in Application.query.filter_by(student_id=student.id).all():
-        res = a.result
-        result.append({
-            'id': a.id,
-            'company_name': a.company.name,
-            'role_offered': a.company.role_offered,
-            'package_lpa': float(a.company.package_lpa),
-            'applied_date': a.applied_date.isoformat(),
-            'status': a.status,
-            'result': res.result if res else None,
-            'offer_date': res.offer_date.isoformat() if (res and res.offer_date) else None
-        })
-    return jsonify(result)
+    apps = sorted(_student().applications, key=lambda a: a.applied_date, reverse=True)
+    return jsonify([application_json(a, allowed_transitions(a, 'student')) for a in apps])
 
 
-@api_bp.route('/student/profile', methods=['GET', 'POST'])
-@role_required('student')
+@api_bp.route('/student/applications/<int:app_id>/respond', methods=['POST'])
+@roles_required('student')
+def respond_to_offer(app_id):
+    """Accept or decline an offer."""
+    application = db.get_or_404(Application, app_id)
+    if application.student_id != _student().id:
+        return jsonify({'error': 'Not found'}), 404
+    new_status = (request.get_json() or {}).get('status')
+    transition(application, new_status, actor='student')
+    return jsonify({'message': f'Offer {new_status.lower()}.', 'application': application_json(application)})
+
+
+@api_bp.route('/student/profile', methods=['GET', 'PUT'])
+@roles_required('student')
 def student_profile():
-    student = _current_student()
-
-    if request.method == 'POST':
-        data = request.get_json() or {}
-        name = data.get('name', '').strip()
-        phone = data.get('phone', '').strip()
-
-        if not name:
-            return jsonify({'error': 'Name is required.'}), 400
-
-        try:
-            cgpa_val = float(data.get('cgpa', ''))
-            if cgpa_val < 0 or cgpa_val > 10:
-                return jsonify({'error': 'CGPA must be between 0.00 and 10.00'}), 400
-            student.cgpa = cgpa_val
-        except (TypeError, ValueError):
-            pass
-
-        try:
-            backlogs_val = int(data.get('backlogs', ''))
-            if backlogs_val >= 0:
-                student.backlogs = backlogs_val
-        except (TypeError, ValueError):
-            pass
-
-        student.name = name
-        student.phone = phone or None
-        db.session.commit()
-        return jsonify({'message': 'Profile updated successfully.'})
-
-    return jsonify({
-        'roll_no': student.roll_no,
-        'name': student.name,
-        'email': student.email,
-        'phone': student.phone or '',
-        'branch': student.branch,
-        'cgpa': float(student.cgpa),
-        'backlogs': student.backlogs,
-        'placement_status': student.placement_status
-    })
+    student = _student()
+    if request.method == 'PUT':
+        # Students may only edit contact details; CGPA and backlogs are set by the college
+        update_student(student, request.get_json() or {}, academic=False)
+        return jsonify({'message': 'Profile updated successfully.', 'profile': student_json(student)})
+    return jsonify(student_json(student))

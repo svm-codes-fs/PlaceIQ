@@ -2,18 +2,17 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Briefcase, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { api } from "@/utils/api";
 
 export function StudentDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/student/dashboard")
-      .then((res) => res.json())
-      .then((json) => { setData(json); setLoading(false); });
+    api.get("/student/dashboard").then(setData).finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
+  if (loading || !data) {
     return (
       <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-pulse">
         <div className="h-20 bg-white/5 rounded-2xl w-2/3" />

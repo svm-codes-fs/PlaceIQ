@@ -1,27 +1,46 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Briefcase, ArrowUpRight } from "lucide-react";
+import { Search, Plus, Briefcase, Pencil, Trash2, Users } from "lucide-react";
+import { api } from "@/utils/api";
+import { Modal } from "@/components/ui/Modal";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Alert, Field, GhostButton, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
+
+const BRANCHES = ["CSE", "ECE", "ME", "CE", "EE", "CHE"];
+const STATUSES = ["Upcoming", "Ongoing", "Completed"];
+const EMPTY = {
+  name: "", role_offered: "", description: "", package_lpa: "", min_cgpa: "0", max_backlogs: "0",
+  allowed_branches: [...BRANCHES], visit_date: "", status: "Upcoming",
+};
 
 export function AdminCompanies() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [eligibleFor, setEligibleFor] = useState(null);
+  const [notice, setNotice] = useState(null);
 
-  useEffect(() => {
-    fetch("/api/admin/companies")
-      .then(res => res.json())
-      .then(data => { setCompanies(data); setLoading(false); });
-  }, []);
+  const load = () => api.get("/admin/companies").then(setCompanies).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
 
-  const filtered = companies.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.role_offered.toLowerCase().includes(search.toLowerCase())
-  );
+  const remove = async (company) => {
+    if (!window.confirm(`Delete the ${company.name} drive? Its ${company.applicant_count} application(s) are removed too.`)) return;
+    try {
+      const data = await api.del(`/admin/companies/${company.id}`);
+      setNotice({ type: "success", text: data.message });
+      load();
+    } catch (err) {
+      setNotice({ type: "error", text: err.message });
+    }
+  };
+
+  const q = search.toLowerCase();
+  const filtered = companies.filter(c => c.name.toLowerCase().includes(q) || c.role_offered.toLowerCase().includes(q));
 
   return (
     <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
 
-      {/* Compact header */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase mb-1">Management</p>
@@ -38,18 +57,20 @@ export function AdminCompanies() {
             <input
               type="text"
               placeholder="Search drives..."
+              aria-label="Search drives"
               className="pl-9 pr-4 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white focus:bg-white/10 focus:border-white/20 focus:outline-none transition-all w-56"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#7C3AED] to-[#2563EB] text-white font-bold text-xs tracking-wide rounded-xl hover:shadow-[0_0_20px_-5px_rgba(124,58,237,0.5)] transition-all">
+          <PrimaryButton onClick={() => setEditing({})}>
             <Plus className="w-3.5 h-3.5" /> Add Drive
-          </button>
+          </PrimaryButton>
         </div>
       </header>
 
-      {/* Table */}
+      {notice && <Alert type={notice.type}>{notice.text}</Alert>}
+
       <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center py-12 text-center animate-pulse">
@@ -70,13 +91,9 @@ export function AdminCompanies() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-white/5">
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Company</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Role</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Package</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Min CGPA</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Status</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Drive Date</th>
-                  <th className="px-5 py-3 w-10"></th>
+                  {["Company", "Role", "Package", "Criteria", "Applicants", "Status", "Drive Date", ""].map((h) => (
+                    <th key={h} className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -97,24 +114,31 @@ export function AdminCompanies() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-primaryLight font-medium">{company.role_offered}</td>
-                    <td className="px-5 py-3.5 text-sm font-semibold text-white">₹{company.package_lpa} <span className="text-xs text-gray-600">LPA</span></td>
-                    <td className="px-5 py-3.5 text-sm text-white font-medium">{company.min_cgpa}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border
-                        ${company.status === 'Upcoming' ? 'bg-primary/20 text-primaryLight border-primary/30' :
-                          company.status === 'Ongoing' ? 'bg-warning/20 text-warning border-warning/30' :
-                          'bg-white/5 text-gray-500 border-white/10'}
-                      `}>
-                        {company.status}
-                      </span>
+                    <td className="px-5 py-3.5 text-sm font-semibold text-white whitespace-nowrap">₹{company.package_lpa} <span className="text-xs text-gray-600">LPA</span></td>
+                    <td className="px-5 py-3.5 text-xs text-gray-400">
+                      <p>CGPA ≥ {company.min_cgpa} · Backlogs ≤ {company.max_backlogs}</p>
+                      <p className="text-[10px] text-gray-600">{company.allowed_branches.join(", ")}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-xs text-gray-500">
+                    <td className="px-5 py-3.5 text-sm text-white">{company.applicant_count}</td>
+                    <td className="px-5 py-3.5"><StatusBadge status={company.status} /></td>
+                    <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">
                       {company.visit_date ? new Date(company.visit_date).toLocaleDateString() : 'TBD'}
                     </td>
                     <td className="px-5 py-3.5">
-                      <button className="p-1.5 text-gray-600 hover:text-primaryLight transition-colors rounded-lg hover:bg-white/5">
-                        <ArrowUpRight className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => setEligibleFor(company)} aria-label={`Eligible students for ${company.name}`} title="Eligible students"
+                          className="p-1.5 text-gray-600 hover:text-primaryLight transition-colors rounded-lg hover:bg-white/10">
+                          <Users className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => setEditing(company)} aria-label={`Edit ${company.name}`}
+                          className="p-1.5 text-gray-600 hover:text-white transition-colors rounded-lg hover:bg-white/10">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => remove(company)} aria-label={`Delete ${company.name}`}
+                          className="p-1.5 text-gray-600 hover:text-danger transition-colors rounded-lg hover:bg-danger/10">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}
@@ -123,6 +147,141 @@ export function AdminCompanies() {
           </div>
         )}
       </div>
+
+      <CompanyForm
+        company={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(text) => { setEditing(null); setNotice({ type: "success", text }); load(); }}
+      />
+      <EligibleStudents company={eligibleFor} onClose={() => setEligibleFor(null)} />
     </div>
+  );
+}
+
+function CompanyForm({ company, onClose, onSaved }) {
+  const isNew = company && !company.id;
+  const [form, setForm] = useState(EMPTY);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setError(null);
+    if (company) {
+      setForm(isNew ? EMPTY : {
+        ...EMPTY, ...company,
+        description: company.description || "",
+        visit_date: company.visit_date || "",
+        package_lpa: String(company.package_lpa),
+        min_cgpa: String(company.min_cgpa),
+        max_backlogs: String(company.max_backlogs),
+      });
+    }
+  }, [company, isNew]);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const toggleBranch = (b) => setForm((f) => ({
+    ...f,
+    allowed_branches: f.allowed_branches.includes(b)
+      ? f.allowed_branches.filter((x) => x !== b)
+      : [...f.allowed_branches, b],
+  }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    const { name, role_offered, description, package_lpa, min_cgpa, max_backlogs, allowed_branches, visit_date, status } = form;
+    const body = { name, role_offered, description, package_lpa, min_cgpa, max_backlogs, allowed_branches, visit_date, status };
+    try {
+      if (isNew) await api.post("/admin/companies", body);
+      else await api.put(`/admin/companies/${company.id}`, body);
+      onSaved(isNew ? `Added the ${name} drive.` : `Updated ${name}.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Modal open={!!company} onClose={onClose} title={isNew ? "Add recruitment drive" : `Edit ${company?.name}`}>
+      <form onSubmit={submit} className="space-y-4">
+        {error && <Alert items={error.items}>{error.text}</Alert>}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Company"><TextInput required value={form.name} onChange={set("name")} /></Field>
+          <Field label="Role offered"><TextInput required value={form.role_offered} onChange={set("role_offered")} /></Field>
+          <Field label="Package (LPA)"><TextInput required type="number" step="0.01" min="0" value={form.package_lpa} onChange={set("package_lpa")} /></Field>
+          <Field label="Drive date"><TextInput type="date" value={form.visit_date} onChange={set("visit_date")} /></Field>
+          <Field label="Minimum CGPA"><TextInput required type="number" step="0.01" min="0" max="10" value={form.min_cgpa} onChange={set("min_cgpa")} /></Field>
+          <Field label="Maximum backlogs"><TextInput required type="number" min="0" value={form.max_backlogs} onChange={set("max_backlogs")} /></Field>
+          <Field label="Status"><Select value={form.status} onChange={set("status")} options={STATUSES} /></Field>
+        </div>
+        <fieldset className="space-y-1.5">
+          <legend className="ml-1 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">Allowed branches</legend>
+          <div className="flex flex-wrap gap-2">
+            {BRANCHES.map((b) => {
+              const on = form.allowed_branches.includes(b);
+              return (
+                <button key={b} type="button" aria-pressed={on} onClick={() => toggleBranch(b)}
+                  className={`rounded-lg border px-3 py-1.5 text-[11px] font-bold tracking-widest transition-all
+                    ${on ? "border-primary/50 bg-primary/20 text-white" : "border-white/10 text-gray-500 hover:text-white"}`}>
+                  {b}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+        <Field label="Description (optional)">
+          <textarea rows={3} value={form.description} onChange={set("description")}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+        </Field>
+        <div className="flex justify-end gap-2 pt-2">
+          <GhostButton type="button" onClick={onClose}>Cancel</GhostButton>
+          <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving..." : isNew ? "Add drive" : "Save changes"}</PrimaryButton>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function EligibleStudents({ company, onClose }) {
+  const [students, setStudents] = useState(null);
+
+  useEffect(() => {
+    setStudents(null);
+    if (company) api.get(`/admin/companies/${company.id}/eligible`).then((d) => setStudents(d.students));
+  }, [company]);
+
+  return (
+    <Modal open={!!company} onClose={onClose} wide
+      title={`Eligible for ${company?.name || ""}`}
+      subtitle={company && `CGPA ≥ ${company.min_cgpa}, backlogs ≤ ${company.max_backlogs}, branches ${company.allowed_branches.join(", ")}`}>
+      {!students ? (
+        <p className="py-8 text-center text-sm text-gray-600 animate-pulse">Loading...</p>
+      ) : students.length === 0 ? (
+        <p className="py-8 text-center text-sm text-gray-500">No students currently meet these criteria.</p>
+      ) : (
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-white/5">
+              {["Student", "Branch", "CGPA", "Backlogs", "Status"].map((h) => (
+                <th key={h} className="py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {students.map((s) => (
+              <tr key={s.id}>
+                <td className="py-2.5 text-sm text-white">{s.name} <span className="text-[10px] text-gray-600">{s.roll_no}</span></td>
+                <td className="py-2.5 text-xs text-gray-400">{s.branch}</td>
+                <td className="py-2.5 text-sm text-white">{s.cgpa.toFixed(2)}</td>
+                <td className="py-2.5 text-sm text-gray-400">{s.backlogs}</td>
+                <td className="py-2.5"><StatusBadge status={s.placement_status} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="mt-4 text-xs text-gray-600">{students?.length ?? 0} eligible students</p>
+    </Modal>
   );
 }
