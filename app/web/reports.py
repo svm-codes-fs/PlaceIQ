@@ -3,7 +3,7 @@ Reports Routes — Placement Reports & Eligibility Lists
 """
 from flask import Blueprint, render_template, request
 from flask_login import login_required
-from app import db
+from app.extensions import db
 from app.models import Student, Company, Application, Result
 from sqlalchemy import text, func
 

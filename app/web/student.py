@@ -4,7 +4,7 @@ Student Routes — Dashboard, Eligible Companies, Apply, My Applications
 from functools import wraps
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from app import db
+from app.extensions import db
 from app.models import Student, Company, Application, Result
 from sqlalchemy import text
 
