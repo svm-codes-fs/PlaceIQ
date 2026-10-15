@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, Users, CheckCircle2, FileText, BarChart2 } from "lucide-react";
+import { api } from "@/utils/api";
 
 export function AdminReports() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/reports")
-      .then(res => res.json())
-      .then(data => { setReport(data); setLoading(false); });
+    api.get("/admin/reports").then(setReport).finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
+  if (loading || !report) {
     return (
       <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-pulse">
         <div className="h-16 bg-white/5 rounded-2xl w-1/3" />

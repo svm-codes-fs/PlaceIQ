@@ -1,9 +1,11 @@
 """
-SQLAlchemy Models — mirrors the SQL schema in sql/01_schema.sql.
+SQLAlchemy Models. Schema changes go through Alembic migrations (migrations/).
 """
-from app.models.user import User
+from app.models.college import College, TenantScoped
+from app.models.user import User, ROLES
 from app.models.student import Student, BRANCHES
-from app.models.company import Company
-from app.models.application import Application, Result, APPLICATION_STATUSES
+from app.models.company import Company, DRIVE_STATUSES
+from app.models.application import Application, APPLICATION_STATUSES
 
-__all__ = ['User', 'Student', 'Company', 'Application', 'Result', 'BRANCHES', 'APPLICATION_STATUSES']
+__all__ = ['College', 'TenantScoped', 'User', 'ROLES', 'Student', 'BRANCHES',
+           'Company', 'DRIVE_STATUSES', 'Application', 'APPLICATION_STATUSES']

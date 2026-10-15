@@ -1,7 +1,11 @@
 """
 Aggregate statistics for the admin dashboard and reports.
+All queries are scoped to the current college by app/tenancy.py.
 """
-from app.models import Student, Company, Application
+from sqlalchemy import func
+
+from app.extensions import db
+from app.models import Application, Company, Student
 
 
 def _rate(part, whole):
@@ -20,15 +24,20 @@ def overview_stats():
     }
 
 
-def branch_metrics():
-    branch_data = {}
-    for s in Student.query.all():
-        data = branch_data.setdefault(s.branch, {'total': 0, 'placed': 0})
-        data['total'] += 1
-        if s.placement_status == 'Placed':
-            data['placed'] += 1
+def status_funnel():
+    """Number of applications currently in each status."""
+    rows = db.session.execute(
+        db.select(Application.status, func.count(Application.id)).group_by(Application.status)
+    ).all()
+    return {status: count for status, count in rows}
 
+
+def branch_metrics():
+    placed = func.sum(db.case((Student.placement_status == 'Placed', 1), else_=0))
+    rows = db.session.execute(
+        db.select(Student.branch, func.count(Student.id), placed).group_by(Student.branch).order_by(Student.branch)
+    ).all()
     return [
-        {'branch': branch, 'total': d['total'], 'placed': d['placed'], 'rate': _rate(d['placed'], d['total'])}
-        for branch, d in branch_data.items()
+        {'branch': branch, 'total': total, 'placed': int(placed or 0), 'rate': _rate(int(placed or 0), total)}
+        for branch, total, placed in rows
     ]

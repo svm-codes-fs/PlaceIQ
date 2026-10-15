@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Briefcase, FileText, CheckCircle2, TrendingUp } from "lucide-react";
+import { Users, Briefcase, FileText, CheckCircle2, TrendingUp, Award } from "lucide-react";
+import { api } from "@/utils/api";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
-export function AdminDashboard() {
+export function AdminDashboard({ user }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/dashboard")
-      .then((res) => res.json())
-      .then((json) => { setData(json); setLoading(false); });
+    api.get("/admin/dashboard").then(setData).finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
+  if (loading || !data) {
     return (
       <div className="max-w-7xl mx-auto pt-8 pb-12 space-y-6 animate-pulse">
         <div className="h-24 bg-white/5 rounded-2xl w-1/2" />
@@ -27,7 +27,7 @@ export function AdminDashboard() {
     );
   }
 
-  const { stats, recent_applications } = data;
+  const { stats, funnel, recent_applications } = data;
 
   return (
     <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-6 animate-in fade-in duration-500">
@@ -42,7 +42,7 @@ export function AdminDashboard() {
             PLACEMENT <span className="text-gradient">SEASON '26.</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1.5 max-w-lg">
-            Track every opportunity, application, and outcome across the campus.
+            Track every opportunity, application, and outcome at {user?.college?.name || "your campus"}.
           </p>
         </div>
       </header>
@@ -91,13 +91,7 @@ export function AdminDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full
-                      ${app.status === 'Offered' ? 'bg-success/20 text-success' :
-                        app.status === 'Rejected' ? 'bg-danger/20 text-danger' :
-                        'bg-white/10 text-gray-400'}
-                    `}>
-                      {app.status}
-                    </span>
+                    <StatusBadge status={app.status} />
                     <span className="text-[10px] text-gray-600 tabular-nums w-20 text-right">
                       {new Date(app.date).toLocaleDateString()}
                     </span>
@@ -116,19 +110,21 @@ export function AdminDashboard() {
           <div className="p-5 space-y-2 relative">
             <div className="absolute left-[2.125rem] top-[2rem] bottom-[1rem] w-px bg-gradient-to-b from-primary/40 via-white/10 to-transparent pointer-events-none" />
             {[
-              { icon: FileText,    label: "APPLIED",      desc: "Students who have submitted their application." },
-              { icon: Users,       label: "SHORTLISTED",  desc: "Candidates selected by the company." },
-              { icon: Briefcase,   label: "INTERVIEW",    desc: "Technical & HR rounds in progress." },
-              { icon: CheckCircle2,label: "OFFERED",      desc: "Final selections confirmed." },
-            ].map((step, i) => (
-              <div key={step.label} className="flex items-start gap-4 group">
+              { icon: FileText,     status: "Applied",     desc: "Submitted, awaiting review." },
+              { icon: Users,        status: "Shortlisted", desc: "Selected by the company for interviews." },
+              { icon: Briefcase,    status: "Interview",   desc: "Technical & HR rounds in progress." },
+              { icon: CheckCircle2, status: "Offered",     desc: "Offer made, waiting for the student." },
+              { icon: Award,        status: "Accepted",    desc: "Offer accepted — student placed." },
+            ].map((step) => (
+              <div key={step.status} className="flex items-start gap-4 group">
                 <div className="w-8 h-8 rounded-xl border border-white/10 bg-[#0D0D12] flex items-center justify-center text-gray-500 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-200 shrink-0 z-10">
                   <step.icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 py-1">
-                  <p className="text-[11px] font-bold text-white tracking-widest">{step.label}</p>
+                  <p className="text-[11px] font-bold text-white tracking-widest uppercase">{step.status}</p>
                   <p className="text-[11px] text-gray-500 leading-relaxed">{step.desc}</p>
                 </div>
+                <p className="py-1 text-xl font-light tabular-nums text-white">{funnel[step.status] || 0}</p>
               </div>
             ))}
           </div>
