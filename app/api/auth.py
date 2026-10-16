@@ -39,10 +39,11 @@ def refresh():
 
 @api_bp.route('/auth/me', methods=['GET'])
 def get_me():
+    # No token: a normal "signed out" answer. An expired token still returns 401 so the client refreshes it.
     verify_jwt_in_request(optional=True)
     if current_user:
         return jsonify({'authenticated': True, 'user': user_json(current_user)})
-    return jsonify({'authenticated': False}), 401
+    return jsonify({'authenticated': False, 'user': None})
 
 
 @api_bp.route('/auth/logout', methods=['POST'])
