@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -10,7 +11,8 @@ export function Modal({ open, title, subtitle, onClose, children, wide = false }
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  return (
+  // Rendered on <body> so the overlay sits above the sidebar and header, not inside <main>'s stacking layer
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -42,6 +44,7 @@ export function Modal({ open, title, subtitle, onClose, children, wide = false }
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

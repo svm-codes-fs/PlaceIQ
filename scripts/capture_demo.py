@@ -44,7 +44,9 @@ def login(page, username):
     page.fill('#login-password', PASSWORD)
     page.click('button[type=submit]')
     page.wait_for_url(lambda url: '/login' not in url)
-    page.wait_for_load_state('networkidle')
+    # Wait for content, not network idle: Socket.IO keeps a request open
+    page.wait_for_selector('main h1, main header')
+    page.wait_for_timeout(800)
 
 
 def logout(page):
@@ -54,7 +56,8 @@ def logout(page):
 
 def interview(page, drive_label, round_value='technical', count='3', answers=ANSWERS):
     page.goto(f'{BASE}/student/interviews')
-    page.wait_for_load_state('networkidle')
+    page.wait_for_selector('form select')
+    page.wait_for_timeout(800)  # drives load into the second select
     selects = page.locator('form select')
     selects.nth(0).select_option(round_value)
     if drive_label:
@@ -78,7 +81,7 @@ def run(page, capture=True):
             shot(page, name, full)
 
     page.goto(f'{BASE}/login')
-    page.wait_for_load_state('networkidle')
+    page.wait_for_selector('#login-username')
     maybe('01-login')
 
     # Student: resume, matches, opportunities, interviews
