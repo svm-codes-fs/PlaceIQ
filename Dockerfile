@@ -13,7 +13,10 @@ COPY app ./app
 COPY migrations ./migrations
 COPY run.py .
 
-RUN useradd --create-home appuser
+# Writable folders for uploaded resumes and the embedding model cache
+RUN useradd --create-home appuser \
+    && mkdir -p /srv/uploads /srv/models \
+    && chown appuser /srv/uploads /srv/models
 USER appuser
 
 EXPOSE 5000

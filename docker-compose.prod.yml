@@ -1,0 +1,79 @@
+# Production stack for a single VM:  docker compose -f docker-compose.prod.yml up -d --build
+#   web (nginx: React build + /api proxy)  http://<host>/
+# Requires a .env with real secrets (see .env.example and DEPLOY.md). Put TLS in front
+# (e.g. Caddy, Cloudflare or a load balancer) and keep JWT_COOKIE_SECURE=true.
+name: placeiq-prod
+
+x-backend: &backend
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    FLASK_CONFIG: production
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_TASK_ALWAYS_EAGER: "false"
+    UPLOAD_DIR: /srv/uploads
+    FASTEMBED_CACHE_DIR: /srv/models
+  volumes:
+    - uploads:/srv/uploads
+    - models:/srv/models
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    <<: *backend
+    # Migrate, optionally load the demo colleges (SEED_DEMO=true), then serve
+    command: >
+      sh -c "flask --app run:app db upgrade
+      && if [ \"$${SEED_DEMO:-false}\" = true ]; then flask --app run:app seed; fi
+      && exec gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 64 run:app"
+
+  worker:
+    <<: *backend
+    command: celery -A app.tasks.worker worker --loglevel=info --concurrency=2
+
+  beat:
+    <<: *backend
+    command: celery -A app.tasks.worker beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  uploads:
+  models:

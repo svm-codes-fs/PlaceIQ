@@ -12,9 +12,15 @@ x-backend: &backend
     DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-placeiq}:${POSTGRES_PASSWORD:-placeiq}@postgres:5432/${POSTGRES_DB:-placeiq}
     REDIS_URL: redis://redis:6379/0
     CELERY_TASK_ALWAYS_EAGER: "false"
+    # Container paths (override any host paths from .env); uploads are shared by api and worker
+    UPLOAD_DIR: /srv/uploads
+    FASTEMBED_CACHE_DIR: /srv/models
+    EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-auto}
   volumes:
     - ./app:/srv/app   # live code reload in development
     - ./migrations:/srv/migrations
+    - uploads:/srv/uploads
+    - models:/srv/models
   depends_on:
     postgres:
       condition: service_healthy
@@ -74,3 +80,5 @@ services:
 
 volumes:
   pgdata:
+  uploads:
+  models:
