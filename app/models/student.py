@@ -35,4 +35,6 @@ class Student(TenantScoped, db.Model):
         db.UniqueConstraint('college_id', 'roll_no', name='uq_student_college_roll'),
         db.CheckConstraint('cgpa >= 0 AND cgpa <= 10', name='ck_student_cgpa'),
         db.CheckConstraint('backlogs >= 0', name='ck_student_backlogs'),
+        # Eligibility lists and branch reports within a college
+        db.Index('ix_students_college_branch_cgpa', 'college_id', 'branch', 'cgpa'),
     )

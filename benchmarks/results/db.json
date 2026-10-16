@@ -1,0 +1,125 @@
+{
+  "dataset": {
+    "colleges": 3,
+    "students": 5000,
+    "companies": 200,
+    "applications": 20000,
+    "application_events": 20000
+  },
+  "college_students": 1667,
+  "runs": 25,
+  "postgres": "16.2",
+  "pgvector": "0.6.2",
+  "queries": {
+    "Admin applications page (newest 50, with names)": {
+      "before": {
+        "median_ms": 5.284,
+        "p95_ms": 5.987,
+        "plan": "Bitmap Index Scan using ix_applications_college_id"
+      },
+      "after": {
+        "median_ms": 0.137,
+        "p95_ms": 0.163,
+        "plan": "Index Scan using ix_applications_college_applied"
+      }
+    },
+    "Dashboard funnel (applications per status)": {
+      "before": {
+        "median_ms": 1.168,
+        "p95_ms": 1.303,
+        "plan": "Bitmap Index Scan using ix_applications_college_id"
+      },
+      "after": {
+        "median_ms": 0.571,
+        "p95_ms": 0.9,
+        "plan": "Index Only Scan using ix_applications_college_status"
+      }
+    },
+    "Eligible students for a drive": {
+      "before": {
+        "median_ms": 1.386,
+        "p95_ms": 1.622,
+        "plan": "Seq Scan"
+      },
+      "after": {
+        "median_ms": 0.664,
+        "p95_ms": 1.011,
+        "plan": "Bitmap Index Scan using ix_students_college_branch_cgpa"
+      }
+    },
+    "Upcoming drives for a student": {
+      "before": {
+        "median_ms": 0.041,
+        "p95_ms": 0.045,
+        "plan": "Seq Scan"
+      },
+      "after": {
+        "median_ms": 0.041,
+        "p95_ms": 0.049,
+        "plan": "Seq Scan"
+      }
+    },
+    "A student's applications": {
+      "before": {
+        "median_ms": 0.021,
+        "p95_ms": 0.036,
+        "plan": "Bitmap Index Scan using ix_applications_student_id"
+      },
+      "after": {
+        "median_ms": 0.02,
+        "p95_ms": 0.026,
+        "plan": "Bitmap Index Scan using ix_applications_student_id"
+      }
+    },
+    "Application timeline": {
+      "before": {
+        "median_ms": 0.009,
+        "p95_ms": 0.014,
+        "plan": "Index Scan using ix_application_events_application_id"
+      },
+      "after": {
+        "median_ms": 0.008,
+        "p95_ms": 0.014,
+        "plan": "Index Scan using ix_application_events_app_created"
+      }
+    },
+    "Placement report (placed students per branch)": {
+      "before": {
+        "median_ms": 1.054,
+        "p95_ms": 1.306,
+        "plan": "Seq Scan"
+      },
+      "after": {
+        "median_ms": 0.995,
+        "p95_ms": 1.192,
+        "plan": "Seq Scan"
+      }
+    }
+  },
+  "vector": {
+    "exact_per_college": {
+      "median_ms": 1.774,
+      "p95_ms": 2.068,
+      "plan": "Seq Scan"
+    },
+    "global_no_index": {
+      "median_ms": 2.703,
+      "p95_ms": 3.06,
+      "plan": "Seq Scan"
+    },
+    "hnsw_build_s": 0.47,
+    "global_hnsw": {
+      "median_ms": 0.307,
+      "p95_ms": 0.454,
+      "plan": "Index Scan using ix_students_embedding_hnsw"
+    },
+    "global_hnsw_recall_at_50": 0.8,
+    "filtered_hnsw": {
+      "median_ms": 0.23,
+      "p95_ms": 0.279,
+      "plan": "Index Scan using ix_students_embedding_hnsw"
+    },
+    "filtered_hnsw_rows_returned": 13,
+    "filtered_hnsw_recall_at_50": 0.26
+  }
+}

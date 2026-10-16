@@ -19,7 +19,7 @@ def _advance(admin, app_id, *statuses):
 def test_status_change_notifies_student_and_can_be_marked_read(make_client, tiet_admin, caplog):
     caplog.set_level('INFO')
     student = make_client('kabir_tiet')  # in the Interview stage at Texas Instruments
-    app_id = find(tiet_admin.get('/api/admin/applications').get_json(), student_name='Kabir Singh')['id']
+    app_id = find(tiet_admin.get('/api/admin/applications').get_json()['items'], student_name='Kabir Singh')['id']
     _advance(tiet_admin, app_id, 'Offered')
 
     data = student.get('/api/notifications').get_json()
@@ -43,7 +43,7 @@ def test_live_push_reaches_the_students_socket(app, make_client, tiet_admin):
     socket = socketio.test_client(app, headers=student.socket_headers())
     assert socket.is_connected()
 
-    app_id = find(tiet_admin.get('/api/admin/applications').get_json(), student_name='Kabir Singh')['id']
+    app_id = find(tiet_admin.get('/api/admin/applications').get_json()['items'], student_name='Kabir Singh')['id']
     _advance(tiet_admin, app_id, 'Rejected')
 
     events = [e for e in socket.get_received() if e['name'] == 'notification']
@@ -84,7 +84,7 @@ def test_csv_import_creates_students(make_client, tiet_admin, caplog):
     job = tiet_admin.get(f'/api/admin/imports/{res.get_json()["id"]}').get_json()
     assert job['status'] == 'succeeded' and job['created_count'] == 2
 
-    rolls = {s['roll_no'] for s in tiet_admin.get('/api/admin/students').get_json()}
+    rolls = {s['roll_no'] for s in tiet_admin.get('/api/admin/students').get_json()['items']}
     assert {'102203201', '102203202'} <= rolls
     assert make_client().login('asha', 'longpassword').status_code == 200
     # Vikram had no password column value: he gets a temporary password by email
@@ -102,7 +102,7 @@ def test_csv_import_is_all_or_nothing_with_row_errors(tiet_admin):
     assert set(rows) == {4, 5}
     assert any('Duplicate email' in e for e in rows[4])
     assert len(rows[5]) == 3
-    rolls = {s['roll_no'] for s in tiet_admin.get('/api/admin/students').get_json()}
+    rolls = {s['roll_no'] for s in tiet_admin.get('/api/admin/students').get_json()['items']}
     assert '102203201' not in rolls  # the valid rows were not saved either
 
 

@@ -27,4 +27,7 @@ class Application(TenantScoped, db.Model):
     __table_args__ = (
         # One application per student per company
         db.UniqueConstraint('student_id', 'company_id', name='uq_student_company'),
+        # Admin applications page (newest first) and the dashboard funnel; see BENCHMARKS.md
+        db.Index('ix_applications_college_applied', 'college_id', 'applied_date'),
+        db.Index('ix_applications_college_status', 'college_id', 'status'),
     )

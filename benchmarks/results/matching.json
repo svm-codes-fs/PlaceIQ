@@ -1,0 +1,15 @@
+{
+  "jobs": 40,
+  "students": 56,
+  "families": 8,
+  "k": 5,
+  "precision_at_5": {
+    "random (expected)": 0.125,
+    "random (one draw)": 0.096,
+    "skill coverage only": 0.893,
+    "semantic only (hash-384-v1)": 0.861,
+    "combined (hash-384-v1)": 0.889,
+    "semantic only (BAAI/bge-small-en-v1.5)": 0.843,
+    "combined (BAAI/bge-small-en-v1.5) [app default]": 0.95
+  }
+}

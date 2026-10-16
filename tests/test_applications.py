@@ -22,7 +22,7 @@ def test_full_pipeline_to_placement(make_client, tiet_admin):
     assert student.post(f'/api/student/apply/{amazon["id"]}').status_code == 201
     assert student.post(f'/api/student/apply/{amazon["id"]}').status_code == 400  # duplicate
 
-    app = find(tiet_admin.get('/api/admin/applications').get_json(), student_name='Diya Verma', company_name='Amazon')
+    app = find(tiet_admin.get('/api/admin/applications').get_json()['items'], student_name='Diya Verma', company_name='Amazon')
     assert app['allowed_transitions'] == ['Shortlisted', 'Rejected']
 
     for status in ('Shortlisted', 'Interview', 'Offered'):
@@ -39,7 +39,7 @@ def test_full_pipeline_to_placement(make_client, tiet_admin):
 
 
 def test_invalid_transitions_are_rejected(make_client, tiet_admin):
-    apps = tiet_admin.get('/api/admin/applications').get_json()
+    apps = tiet_admin.get('/api/admin/applications').get_json()['items']
     interview = find(apps, status='Interview')
     offered = find(apps, status='Offered')
     accepted = find(apps, status='Accepted')

@@ -1,24 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, Plus, Pencil, Trash2, CheckCircle2, Users, FileUp } from "lucide-react";
 import { api } from "@/utils/api";
 import { Modal } from "@/components/ui/Modal";
 import { ImportStudents } from "./ImportStudents";
+import { Pagination, useDebounced } from "@/components/ui/Pagination";
+
+const PER_PAGE = 25;
 import { Alert, Field, GhostButton, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
 
 const BRANCHES = ["CSE", "ECE", "ME", "CE", "EE", "CHE"];
 const EMPTY = { username: "", email: "", password: "", name: "", roll_no: "", phone: "", branch: "CSE", cgpa: "", backlogs: "0" };
 
 export function AdminStudents() {
-  const [students, setStudents] = useState([]);
+  const [data, setData] = useState({ items: [], total: 0, all_students: 0, placed: 0 });
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null); // null = closed, {} = new, student = edit
   const [notice, setNotice] = useState(null);
   const [importing, setImporting] = useState(false);
 
-  const load = () => api.get("/admin/students").then(setStudents).finally(() => setLoading(false));
-  useEffect(() => { load(); }, []);
+  const query = useDebounced(search);
+  const load = useCallback(() => api.get(`/admin/students?page=${page}&per_page=${PER_PAGE}&q=${encodeURIComponent(query)}`)
+    .then(setData).finally(() => setLoading(false)), [page, query]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(1); }, [query]);
 
   const remove = async (student) => {
     if (!window.confirm(`Delete ${student.name} (${student.roll_no})? Their login and applications are removed too.`)) return;
@@ -31,10 +38,7 @@ export function AdminStudents() {
     }
   };
 
-  const q = search.toLowerCase();
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(q) || s.roll_no.toLowerCase().includes(q) || s.branch.toLowerCase().includes(q)
-  );
+  const filteredStudents = data.items;
 
   return (
     <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
@@ -46,7 +50,7 @@ export function AdminStudents() {
             STUDENT <span className="text-gradient">DIRECTORY.</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {students.length} students registered · {students.filter(s => s.placement_status === 'Placed').length} placed
+            {data.all_students.toLocaleString()} students registered · {data.placed.toLocaleString()} placed
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -153,6 +157,7 @@ export function AdminStudents() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} perPage={PER_PAGE} total={data.total} onPage={setPage} />
       </div>
 
       <ImportStudents

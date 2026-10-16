@@ -27,14 +27,18 @@ class ApplicationEvent(TenantScoped, db.Model):
     __tablename__ = 'application_events'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    application_id = db.Column(db.Integer, db.ForeignKey('applications.id', ondelete='CASCADE'),
-                               nullable=False, index=True)
+    application_id = db.Column(db.Integer, db.ForeignKey('applications.id', ondelete='CASCADE'), nullable=False)
     from_status = db.Column(db.String(20))
     to_status = db.Column(db.String(20), nullable=False)
     actor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     actor_role = db.Column(db.String(20))
     note = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        # An application's timeline in order
+        db.Index('ix_application_events_app_created', 'application_id', 'created_at'),
+    )
 
     actor = db.relationship('User')
     application = db.relationship('Application', backref=db.backref(
