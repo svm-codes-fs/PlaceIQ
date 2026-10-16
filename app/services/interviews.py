@@ -262,7 +262,7 @@ def _keywords(text):
 def rubric_score(question):
     """Transparent offline rubric: coverage of the ideal points, structure and evidence of depth."""
     answer = (question.answer or '').strip()
-    if len(answer.split()) < 5:
+    if len(answer.split()) < 12:
         return 0, 0, 0, 'No real answer was given. Even a partial answer earns credit — structure your thoughts and try.'
 
     words = answer.split()

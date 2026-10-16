@@ -41,7 +41,7 @@ def test_refresh_issues_new_access_token(tiet_admin):
 
 def test_logout_clears_session(tiet_admin):
     assert tiet_admin.post('/api/auth/logout').status_code == 200
-    assert tiet_admin.get('/api/auth/me').status_code == 401
+    assert tiet_admin.get('/api/auth/me').get_json() == {'authenticated': False, 'user': None}
 
 
 def test_roles_are_enforced(make_client, tiet_admin):

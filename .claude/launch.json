@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "backend",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "E:/placeiq-dev/venv/Scripts/python.exe",
       "runtimeArgs": ["run.py"],
       "port": 5000
     },
