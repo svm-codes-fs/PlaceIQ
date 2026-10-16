@@ -28,6 +28,8 @@ def student_json(s):
         'cgpa': float(s.cgpa),
         'backlogs': s.backlogs,
         'placement_status': s.placement_status,
+        'skills': s.skills or [],
+        'profile_summary': s.profile_summary or '',
     }
 
 
@@ -41,6 +43,7 @@ def company_json(c):
         'min_cgpa': float(c.min_cgpa),
         'max_backlogs': c.max_backlogs,
         'allowed_branches': c.get_branches_list(),
+        'required_skills': c.required_skills or [],
         'visit_date': _iso(c.visit_date),
         'status': c.status,
         'applicant_count': len(c.applications),

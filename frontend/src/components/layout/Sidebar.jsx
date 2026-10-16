@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Briefcase, FileText, Trophy, BarChart, User, LogOut, Hexagon, Building2, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, Trophy, BarChart, User, LogOut, Hexagon, Building2, ShieldCheck, Sparkles, ScrollText, MessagesSquare } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { motion } from "framer-motion";
 import { HOME } from "@/utils/api";
@@ -10,11 +10,19 @@ const NAV_SECTIONS = {
     {
       title: "PLACEMENT",
       items: [
+        { name: "Job Matches", path: "/student/matches", icon: Sparkles },
         { name: "Opportunities", path: "/student/companies", icon: Briefcase },
         { name: "Applications", path: "/student/applications", icon: FileText },
+        { name: "Mock Interviews", path: "/student/interviews", icon: MessagesSquare },
       ]
     },
-    { title: "ACCOUNT", items: [{ name: "Profile", path: "/student/profile", icon: User }] }
+    {
+      title: "ACCOUNT",
+      items: [
+        { name: "Resume & Skills", path: "/student/resume", icon: ScrollText },
+        { name: "Profile", path: "/student/profile", icon: User },
+      ]
+    }
   ],
   college_admin: [
     { title: "OVERVIEW", items: [{ name: "Dashboard", path: "/admin", icon: LayoutDashboard }] },

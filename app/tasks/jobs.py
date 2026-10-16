@@ -128,3 +128,29 @@ def interview_reminders():
                    f'Your {app.status.lower()} round for {app.company.role_offered} is on {tomorrow:%d %b}.',
                    link='/student/applications', email=True)
     return len(apps)
+
+
+@shared_task
+def parse_resume(resume_id):
+    """Extract a profile from an uploaded resume and tell the student it's ready to review."""
+    from app.models import Resume
+    from app.services.resumes import parse
+
+    resume = db.session.get(Resume, resume_id)
+    if not resume:
+        return None
+    with college_context(resume.college_id):
+        parse(resume)
+        push_to_user(resume.student.user_id, 'resume_parsed', resume.to_json())
+        return resume.status
+
+
+@shared_task
+def embed_company(company_id):
+    """Recompute a drive's embedding after it is created or edited."""
+    from app.services.matching import refresh_company
+
+    company = db.session.get(Company, company_id)
+    if company:
+        with college_context(company.college_id):
+            refresh_company(company)

@@ -28,3 +28,6 @@ Thumbs.db
 # Claude Code local settings (launch.json is shared)
 .claude/*
 !.claude/launch.json
+
+# Uploaded files (resumes) in local development
+instance/

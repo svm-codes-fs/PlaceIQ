@@ -8,6 +8,7 @@ from app.extensions import db
 from app.models import BRANCHES, DRIVE_STATUSES, Company, Student
 from app.services.accounts import ValidationError
 from app.services.eligibility import is_eligible
+from app.services.skills import parse_skill_list
 
 
 def _decimal(errors, data, key, label, low, high=None):
@@ -67,6 +68,12 @@ def _validate(data, partial):
         except ValueError:
             errors.append('Visit date must be in YYYY-MM-DD format.')
 
+    if supplied('required_skills'):
+        skills = parse_skill_list(data.get('required_skills'))
+        if len(skills) > 25:
+            errors.append('List at most 25 required skills.')
+        values['required_skills'] = skills
+
     if supplied('status'):
         status = data.get('status') or 'Upcoming'
         if status in DRIVE_STATUSES:
@@ -85,15 +92,21 @@ def create_company(data):
     db.session.commit()
 
     from app.tasks import enqueue
-    from app.tasks.jobs import notify_new_drive
+    from app.tasks.jobs import embed_company, notify_new_drive
+    enqueue(embed_company, company.id)
     enqueue(notify_new_drive, company.id)
     return company
 
 
 def update_company(company, data):
-    for key, value in _validate(data, partial=True).items():
+    values = _validate(data, partial=True)
+    for key, value in values.items():
         setattr(company, key, value)
     db.session.commit()
+    if values.keys() & {'name', 'role_offered', 'description', 'required_skills'}:
+        from app.tasks import enqueue
+        from app.tasks.jobs import embed_company
+        enqueue(embed_company, company.id)
     return company
 
 

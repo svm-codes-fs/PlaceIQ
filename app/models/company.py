@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.college import TenantScoped, utcnow
+from app.models.vector import EmbeddingType
 
 DRIVE_STATUSES = ('Upcoming', 'Ongoing', 'Completed')
 
@@ -18,6 +19,9 @@ class Company(TenantScoped, db.Model):
     allowed_branches = db.Column(db.String(100), nullable=False, default='CSE,ECE,ME,CE,EE,CHE')
     visit_date = db.Column(db.Date)
     status = db.Column(db.Enum(*DRIVE_STATUSES, name='drive_status'), nullable=False, default='Upcoming')
+    required_skills = db.Column(db.JSON, nullable=False, default=list)
+    embedding = db.deferred(db.Column(EmbeddingType))
+    embedding_model = db.Column(db.String(80))
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
