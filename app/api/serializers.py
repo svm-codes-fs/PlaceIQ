@@ -46,7 +46,7 @@ def company_json(c):
         'required_skills': c.required_skills or [],
         'visit_date': _iso(c.visit_date),
         'status': c.status,
-        'applicant_count': len(c.applications),
+        'applicant_count': c.applicant_count,
     }
 
 

@@ -1,6 +1,7 @@
 """College admin endpoints. Every query here is limited to the admin's college by app/tenancy.py."""
 from flask import Response, jsonify, request
 from flask_jwt_extended import current_user
+from sqlalchemy.orm import contains_eager, joinedload, selectinload
 
 from app.api import api_bp
 from app.api.serializers import application_json, company_json, student_json
@@ -11,8 +12,8 @@ from app.services import reports
 from app.services.accounts import create_student, update_student
 from app.services.applications import allowed_transitions, timeline, transition
 from app.services.companies import create_company, eligible_students, update_company
-from app.services.policies import list_policies, save_policy
 from app.services.imports import TEMPLATE
+from app.services.policies import list_policies, save_policy
 from app.tasks import enqueue
 from app.tasks.jobs import import_students
 from app.tenancy import current_college_id
@@ -23,7 +24,7 @@ admin_only = roles_required('college_admin')
 @api_bp.route('/admin/dashboard', methods=['GET'])
 @admin_only
 def admin_dashboard():
-    recent_apps = Application.query.order_by(Application.applied_date.desc()).limit(5).all()
+    recent_apps = Application.query.options(joinedload(Application.student), joinedload(Application.company))         .order_by(Application.applied_date.desc()).limit(5).all()
     recent = [{
         'id': a.id,
         'student_name': a.student.name,
@@ -37,10 +38,35 @@ def admin_dashboard():
 
 # ---- Students ---------------------------------------------------------------
 
+def _page_args():
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+        per_page = min(200, max(1, int(request.args.get('per_page', 50))))
+    except ValueError:
+        page, per_page = 1, 50
+    return page, per_page, (request.args.get('q') or '').strip()
+
+
+def _page(query, page, per_page):
+    total = query.order_by(None).count()
+    return query.offset((page - 1) * per_page).limit(per_page).all(), total
+
+
 @api_bp.route('/admin/students', methods=['GET'])
 @admin_only
 def admin_students():
-    return jsonify([student_json(s) for s in Student.query.order_by(Student.roll_no).all()])
+    """Paginated, searchable student list (?page, per_page, q, placement_status)."""
+    page, per_page, q = _page_args()
+    query = Student.query.options(selectinload(Student.user))
+    if q:
+        like = f'%{q}%'
+        query = query.filter(Student.name.ilike(like) | Student.roll_no.ilike(like) | Student.branch.cast(db.String).ilike(like))
+    if request.args.get('placement_status'):
+        query = query.filter(Student.placement_status == request.args['placement_status'])
+    students, total = _page(query.order_by(Student.roll_no), page, per_page)
+    placed = Student.query.filter_by(placement_status='Placed').count()
+    return jsonify({'items': [student_json(s) for s in students], 'total': total, 'page': page,
+                    'per_page': per_page, 'all_students': Student.query.count(), 'placed': placed})
 
 
 @api_bp.route('/admin/students', methods=['POST'])
@@ -141,8 +167,17 @@ def admin_company_eligible(company_id):
 @api_bp.route('/admin/applications', methods=['GET'])
 @admin_only
 def admin_applications():
-    apps = Application.query.order_by(Application.applied_date.desc()).all()
-    return jsonify([application_json(a, allowed_transitions(a, 'admin')) for a in apps])
+    """Paginated, searchable applications (?page, per_page, q, status), newest first."""
+    page, per_page, q = _page_args()
+    query = Application.query.join(Application.student).join(Application.company)         .options(contains_eager(Application.student), contains_eager(Application.company))
+    if q:
+        like = f'%{q}%'
+        query = query.filter(Student.name.ilike(like) | Student.roll_no.ilike(like) | Company.name.ilike(like))
+    if request.args.get('status'):
+        query = query.filter(Application.status == request.args['status'])
+    apps, total = _page(query.order_by(Application.applied_date.desc(), Application.id.desc()), page, per_page)
+    return jsonify({'items': [application_json(a, allowed_transitions(a, 'admin')) for a in apps], 'total': total,
+                    'page': page, 'per_page': per_page, 'status_counts': reports.status_funnel()})
 
 
 @api_bp.route('/admin/applications/<int:app_id>/status', methods=['POST'])
@@ -180,7 +215,8 @@ def admin_save_policy(rule_type):
 @admin_only
 def admin_results():
     """Offers made: accepted, pending and declined."""
-    apps = (Application.query.filter(Application.status.in_(('Offered', 'Accepted', 'Declined', 'Expired')))
+    apps = (Application.query.options(joinedload(Application.student), joinedload(Application.company))
+            .filter(Application.status.in_(('Offered', 'Accepted', 'Declined', 'Expired')))
             .order_by(Application.offer_date.desc()).all())
     return jsonify([application_json(a) for a in apps])
 

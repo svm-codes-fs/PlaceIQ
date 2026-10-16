@@ -31,6 +31,8 @@ class Company(TenantScoped, db.Model):
         db.CheckConstraint('package_lpa >= 0', name='ck_company_package'),
         db.CheckConstraint('min_cgpa >= 0 AND min_cgpa <= 10', name='ck_company_min_cgpa'),
         db.CheckConstraint('max_backlogs >= 0', name='ck_company_max_backlogs'),
+        # Upcoming drives for a college, ordered by date
+        db.Index('ix_companies_college_status_visit', 'college_id', 'status', 'visit_date'),
     )
 
     def get_branches_list(self):

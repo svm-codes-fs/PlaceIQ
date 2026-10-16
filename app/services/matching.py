@@ -5,9 +5,14 @@ score = 100 × (0.55 × semantic similarity + 0.45 × required-skill coverage)
 (semantic similarity alone when a drive lists no required skills).
 
 Eligibility is reported alongside the score, never hidden: a student sees the
-best matches *and* which of them they can't apply to and why. On PostgreSQL,
-candidate search for a drive first narrows the college's students with a
-pgvector nearest-neighbour query (HNSW index), then re-ranks them in Python.
+best matches *and* which of them they can't apply to and why.
+
+On PostgreSQL, candidate search for a drive narrows the college's students to
+the CANDIDATE_POOL nearest by cosine distance (pgvector) and re-ranks those in
+Python. The distance scan is deliberately *exact*: benchmarks showed an HNSW
+index combined with the per-college filter returned only 13 of 50 requested
+rows (recall 0.26), while an exact scan of a 1,667-student college takes
+~2 ms (see BENCHMARKS.md).
 """
 from app.extensions import db
 from app.models import Company, Student
@@ -113,15 +118,20 @@ def candidates_for_company(company, limit=25):
     ensure_embeddings([company], company_text)
     query = Student.query
     if db.engine.dialect.name == 'postgresql':
-        # Make sure every student has a vector from the current model, then let
-        # pgvector's HNSW index pick the nearest students before re-ranking
+        # Make sure every student has a vector from the current model
         model = embeddings.model_name()
         stale = Student.query.filter((Student.embedding.is_(None)) | (Student.embedding_model != model)).all()
         if stale:
             _embed_objects(stale, student_text)
             db.session.commit()
-        query = query.order_by(Student.embedding.cosine_distance(_vec(company.embedding))).limit(CANDIDATE_POOL)
-        students = query.all()
+        # Exact nearest students in this college; MATERIALIZED stops the planner from
+        # swapping in an approximate index that would drop filtered-out neighbours
+        ranked = (db.select(Student.id, Student.embedding.cosine_distance(_vec(company.embedding)).label('distance'))
+                  .where(Student.college_id == company.college_id)
+                  .cte('ranked').prefix_with('MATERIALIZED'))
+        ids = db.session.execute(
+            db.select(ranked.c.id).order_by(ranked.c.distance).limit(CANDIDATE_POOL)).scalars().all()
+        students = query.filter(Student.id.in_(ids)).all() if ids else []
     else:
         students = ensure_embeddings(query.all(), student_text)
 

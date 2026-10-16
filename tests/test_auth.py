@@ -65,8 +65,8 @@ def test_register_creates_student_in_chosen_college(app, make_client, dit_admin,
     # Registration signs the student in
     assert client.get('/api/student/profile').get_json()['roll_no'] == 'DIT9999'
 
-    assert any(s['roll_no'] == 'DIT9999' for s in dit_admin.get('/api/admin/students').get_json())
-    assert not any(s['roll_no'] == 'DIT9999' for s in tiet_admin.get('/api/admin/students').get_json())
+    assert any(s['roll_no'] == 'DIT9999' for s in dit_admin.get('/api/admin/students').get_json()['items'])
+    assert not any(s['roll_no'] == 'DIT9999' for s in tiet_admin.get('/api/admin/students').get_json()['items'])
 
 
 def test_register_validates_input(make_client):

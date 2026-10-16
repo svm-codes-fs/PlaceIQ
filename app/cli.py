@@ -3,6 +3,7 @@ Flask CLI commands.
 
     flask db upgrade   apply migrations (Flask-Migrate)
     flask seed         create the super admin and two demo colleges (idempotent)
+    flask seed-large   bulk benchmark data (app/bulk_seed.py)
 """
 from datetime import date, timedelta
 
@@ -168,6 +169,9 @@ def _seed_history(application, final_status):
 
 
 def register_cli(app):
+    from app import bulk_seed
+    bulk_seed.register(app)
+
     @app.cli.command('seed')
     def seed():
         """Create the super admin and demo colleges (skipped if already seeded)."""

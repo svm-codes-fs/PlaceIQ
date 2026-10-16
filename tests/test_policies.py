@@ -56,7 +56,7 @@ def test_dream_lock_limits_placed_students_to_dream_drives(make_client, tiet_adm
 
 def test_block_after_placement(make_client, dit_admin):
     # Place Neha via the pipeline, then she can't apply anywhere else in DIT
-    app_id = find(dit_admin.get('/api/admin/applications').get_json(), student_name='Neha Joshi')['id']
+    app_id = find(dit_admin.get('/api/admin/applications').get_json()['items'], student_name='Neha Joshi')['id']
     for status in ('Interview', 'Offered'):
         assert dit_admin.post(f'/api/admin/applications/{app_id}/status', json={'status': status}).status_code == 200
     neha = make_client('neha_dit')
@@ -76,7 +76,7 @@ def test_max_offers_blocks_new_offer(make_client, tiet_admin):
     # Raise the limit so she can apply, then lower it: the admin can't make a second offer
     _set_policy(tiet_admin, 'max_offers', True, limit=3)
     assert student.post(f'/api/student/apply/{amazon["id"]}').status_code == 201
-    app_id = find(tiet_admin.get('/api/admin/applications').get_json(),
+    app_id = find(tiet_admin.get('/api/admin/applications').get_json()['items'],
                   student_name='Ananya Gupta', company_name='Amazon')['id']
     for status in ('Shortlisted', 'Interview'):
         tiet_admin.post(f'/api/admin/applications/{app_id}/status', json={'status': status})
@@ -89,7 +89,7 @@ def test_timeline_records_every_change_with_actor(make_client, tiet_admin):
     student = make_client('diya_tiet')
     amazon = find(student.get('/api/student/companies').get_json(), name='Amazon')
     student.post(f'/api/student/apply/{amazon["id"]}')
-    app_id = find(tiet_admin.get('/api/admin/applications').get_json(),
+    app_id = find(tiet_admin.get('/api/admin/applications').get_json()['items'],
                   student_name='Diya Verma', company_name='Amazon')['id']
     tiet_admin.post(f'/api/admin/applications/{app_id}/status', json={'status': 'Shortlisted', 'note': 'Strong resume'})
 
@@ -104,7 +104,7 @@ def test_timeline_records_every_change_with_actor(make_client, tiet_admin):
 
 
 def test_seeded_applications_have_history(tiet_admin):
-    accepted = find(tiet_admin.get('/api/admin/applications').get_json(), status='Accepted')
+    accepted = find(tiet_admin.get('/api/admin/applications').get_json()['items'], status='Accepted')
     events = tiet_admin.get(f'/api/admin/applications/{accepted["id"]}/timeline').get_json()
     assert [e['to_status'] for e in events] == ['Applied', 'Shortlisted', 'Interview', 'Offered', 'Accepted']
 

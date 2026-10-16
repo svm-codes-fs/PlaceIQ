@@ -50,6 +50,7 @@ class Config:
     SUPERADMIN_USERNAME = os.environ.get('SUPERADMIN_USERNAME', 'superadmin')
     SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL', 'superadmin@placeiq.dev')
     SEED_PASSWORD = os.environ.get('SEED_PASSWORD', 'password123')
+    BENCH_PASSWORD = os.environ.get('BENCH_PASSWORD', 'benchpass123')
 
     # Celery / Redis
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
@@ -119,7 +120,8 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
-    JWT_COOKIE_SECURE = True
+    # Secure cookies need HTTPS; set JWT_COOKIE_SECURE=false only to try the stack over plain HTTP
+    JWT_COOKIE_SECURE = _bool('JWT_COOKIE_SECURE', 'true')
 
 
 # Config mapping

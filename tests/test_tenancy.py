@@ -8,12 +8,13 @@ from tests.conftest import find
 
 
 def _ids(client, url):
-    return [item['id'] for item in client.get(url).get_json()]
+    data = client.get(url).get_json()
+    return [item['id'] for item in (data['items'] if isinstance(data, dict) else data)]
 
 
 def test_admins_only_list_their_own_college(tiet_admin, dit_admin):
-    tiet_rolls = {s['roll_no'] for s in tiet_admin.get('/api/admin/students').get_json()}
-    dit_rolls = {s['roll_no'] for s in dit_admin.get('/api/admin/students').get_json()}
+    tiet_rolls = {s['roll_no'] for s in tiet_admin.get('/api/admin/students').get_json()['items']}
+    dit_rolls = {s['roll_no'] for s in dit_admin.get('/api/admin/students').get_json()['items']}
     assert tiet_rolls and dit_rolls
     assert all(r.startswith('1022') for r in tiet_rolls)
     assert all(r.startswith('DIT') for r in dit_rolls)
@@ -41,7 +42,7 @@ def test_admin_cannot_touch_other_college_records(tiet_admin, dit_admin):
     assert res.status_code == 404
 
     # Nothing changed
-    assert find(dit_admin.get('/api/admin/students').get_json(), id=dit_student)['name'] != 'Hacked'
+    assert find(dit_admin.get('/api/admin/students').get_json()['items'], id=dit_student)['name'] != 'Hacked'
 
 
 def test_student_only_sees_and_applies_to_own_college_drives(make_client, tiet_admin):
@@ -70,7 +71,7 @@ def test_super_admin_creates_college_with_admin(superadmin, make_client):
 
     new_admin = make_client()
     assert new_admin.login('new_admin', 'longenough').status_code == 200
-    assert new_admin.get('/api/admin/students').get_json() == []
+    assert new_admin.get('/api/admin/students').get_json()['items'] == []
 
 
 def test_orm_refuses_cross_college_writes(app):

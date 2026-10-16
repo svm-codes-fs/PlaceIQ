@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, FileText, History } from "lucide-react";
 import { api } from "@/utils/api";
@@ -6,6 +6,9 @@ import { Alert } from "@/components/ui/Form";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
 import { Timeline } from "@/components/ui/Timeline";
+import { Pagination, useDebounced } from "@/components/ui/Pagination";
+
+const PER_PAGE = 25;
 
 // Button label for each move the state machine allows
 const ACTION_LABELS = {
@@ -16,25 +19,29 @@ const ACTION_LABELS = {
 };
 
 export function AdminApplications() {
-  const [applications, setApplications] = useState([]);
+  const [data, setData] = useState({ items: [], total: 0, status_counts: {} });
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updating, setUpdating] = useState(null);
   const [error, setError] = useState(null);
   const [historyFor, setHistoryFor] = useState(null);
 
-  const fetchApplications = () =>
-    api.get("/admin/applications").then(setApplications).finally(() => setLoading(false));
+  const query = useDebounced(search);
+  const fetchApplications = useCallback(() =>
+    api.get(`/admin/applications?page=${page}&per_page=${PER_PAGE}&q=${encodeURIComponent(query)}`)
+      .then(setData).finally(() => setLoading(false)), [page, query]);
 
-  useEffect(() => { fetchApplications(); }, []);
+  useEffect(() => { fetchApplications(); }, [fetchApplications]);
+  useEffect(() => { setPage(1); }, [query]);
 
   const handleStatusChange = async (app, newStatus) => {
     if (newStatus === "Rejected" && !window.confirm(`Reject ${app.student_name} for ${app.company_name}? This can't be undone.`)) return;
     setUpdating(app.id);
     setError(null);
     try {
-      const data = await api.post(`/admin/applications/${app.id}/status`, { status: newStatus });
-      setApplications((prev) => prev.map((a) => (a.id === app.id ? data.application : a)));
+      const res = await api.post(`/admin/applications/${app.id}/status`, { status: newStatus });
+      setData((d) => ({ ...d, items: d.items.map((a) => (a.id === app.id ? res.application : a)) }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -42,10 +49,8 @@ export function AdminApplications() {
     }
   };
 
-  const filteredApps = applications.filter((a) =>
-    a.student_name.toLowerCase().includes(search.toLowerCase()) ||
-    a.company_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredApps = data.items;
+  const totalAll = Object.values(data.status_counts).reduce((a, b) => a + b, 0);
 
   return (
     <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
@@ -58,7 +63,7 @@ export function AdminApplications() {
             APPLICATION <span className="text-gradient">PIPELINE.</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {applications.length} total · {applications.filter(a => a.status === 'Accepted').length} placed
+            {totalAll.toLocaleString()} total · {(data.status_counts.Accepted || 0).toLocaleString()} placed
           </p>
         </div>
         <div className="relative">
@@ -159,6 +164,7 @@ export function AdminApplications() {
             </table>
           </div>
         )}
+        <Pagination page={page} perPage={PER_PAGE} total={data.total} onPage={setPage} />
       </div>
       <Modal open={!!historyFor} onClose={() => setHistoryFor(null)} title="Application history"
         subtitle={historyFor && `${historyFor.student_name} · ${historyFor.company_name}`}>
