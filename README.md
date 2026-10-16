@@ -1,127 +1,127 @@
-# Placement Management System
+# PlaceIQ — Campus Placement Platform
 
-A web application that runs a college's campus placement process end to end: student registration and profiles, recruiting companies with eligibility rules, applications, results and placement reports. Built as the UCS310 Database Management Systems project at Thapar Institute of Engineering and Technology.
+A multi-college placement platform: students register and apply to recruitment drives, college placement cells run the hiring pipeline, and a platform admin onboards colleges. Each college's data is isolated from every other college's.
 
-The project shows core DBMS concepts working inside a real application: a schema in third normal form, stored procedures, triggers, multi-table joins and aggregate reports.
+Started as the UCS310 Database Management Systems project at Thapar Institute of Engineering and Technology, and being upgraded step by step into a production-style application.
 
 ## Features
 
 **Students**
-- Register and maintain a profile (roll number, branch, CGPA, backlogs)
-- See only the companies they are eligible for, and apply in one click
-- Track the status of every application
+- Self-registration into their college
+- See every drive at their college and, for drives they can't apply to, exactly why (e.g. "CGPA 6.90 is below the cutoff of 7.50")
+- Apply, track each application through the pipeline, and accept or decline offers
 
-**Administrators (placement cell)**
-- Dashboard with placement statistics
-- Add, edit and delete students and companies
-- Set each company's eligibility: minimum CGPA, maximum backlogs, allowed branches
-- Move applications through the funnel: Applied → Shortlisted → Interview → Offered / Rejected
-- Record final results; a selected student is marked Placed automatically
+**College admins (placement cell)**
+- Dashboard with placement statistics and a live recruitment funnel
+- Add, edit and delete students and drives; set eligibility rules (minimum CGPA, maximum backlogs, allowed branches)
+- See which students are eligible for a drive
+- Move applications through the pipeline; export results as CSV
+- Branch-wise placement report
 
-**Reports**
-- Company-wise placement report (applications, selected, rejected)
-- Eligibility list for any company
+**Super admin**
+- Add colleges with their first admin; platform-wide statistics per college
 
-## How eligibility works
+## How it works
 
-A student can apply to a company only if they are **unplaced**, their **CGPA ≥ the company's minimum**, their **backlogs ≤ the company's maximum**, and their **branch** is in the allowed list. The check is enforced twice:
+**Multi-tenancy.** Students, drives and applications carry a `college_id`. SQLAlchemy session hooks in [`app/tenancy.py`](app/tenancy.py) add the current user's college to every query and refuse writes to another college's rows, so an endpoint can't leak data even if it forgets a filter. Tests prove two colleges can't read or modify each other's records.
 
-1. In the `apply_to_company` stored procedure (and in Python as a fallback), and
-2. In the `trg_before_application_insert` trigger, so an ineligible application is rejected by the database even if the application code is bypassed.
+**Application pipeline.** Status moves through a fixed state machine ([`app/services/applications.py`](app/services/applications.py)):
 
-When a result is recorded, the `trg_after_result_insert` trigger updates the application status and, for a selection, sets the student's status to Placed.
+```
+Applied → Shortlisted → Interview → Offered → Accepted   (student)
+                                          └─→ Declined   (student)
+Any stage before Accepted ───────────────────→ Rejected   (admin)
+```
+
+Accepting an offer marks the student as placed.
+
+**Authentication.** JWT access (15 min) and refresh (7 day) tokens in httpOnly cookies, with CSRF protection on state-changing requests. Roles: `super_admin`, `college_admin`, `student`.
 
 ## Tech stack
 
 | Layer | Tools |
 |---|---|
-| Backend | Python, Flask, Flask-Login, Flask-SQLAlchemy, Flask-Migrate |
-| Database | MySQL 8 (stored procedures and triggers) or SQLite for quick local runs |
-| Frontend | Jinja2 templates, HTML, CSS, JavaScript |
-| Security | Hashed passwords (Werkzeug), role-based access for admin and student |
+| Frontend | React 18, Vite, Tailwind CSS, Framer Motion |
+| API | Flask (REST), SQLAlchemy, Flask-JWT-Extended |
+| Database | PostgreSQL 16 with pgvector (SQLite for quick local runs), Alembic migrations |
+| Background jobs | Celery + Redis |
+| Tooling | Docker Compose, pytest, ruff, GitHub Actions |
 
 ## Getting started
 
-Requires Python 3.10 or newer.
+### With Docker (full stack)
 
 ```bash
-pip install -r requirements.txt
+docker compose up --build
+```
+
+Starts PostgreSQL, Redis, the API, a Celery worker and scheduler, and the frontend. Migrations and demo data are applied automatically. Open http://localhost:3000.
+
+### Without Docker (SQLite)
+
+Requires Python 3.12 and Node 20.
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+```bash
+flask --app run.py db upgrade
+```
+
+```bash
+flask --app run.py seed
 ```
 
 ```bash
 python run.py
 ```
 
-Then open http://127.0.0.1:5000.
+In a second terminal:
 
-By default the app uses a local SQLite file (`placement.db`), so it runs with no database setup. Stored procedures and triggers are MySQL features; on SQLite the app falls back to equivalent Python logic.
+```bash
+npm --prefix frontend install
+```
 
-### Using MySQL (full DBMS features)
+```bash
+npm --prefix frontend run dev
+```
 
-1. Run the scripts in order in MySQL 8:
+Open http://localhost:3000. Settings are read from a `.env` file; see [`.env.example`](.env.example).
 
-    ```bash
-    mysql -u root -p < sql/01_schema.sql
-    ```
+### Demo accounts
 
-    ```bash
-    mysql -u root -p < sql/02_procedures.sql
-    ```
+`flask seed` creates two colleges with demo data. Every demo account uses the password set in `SEED_PASSWORD` (default `password123`; change it for anything other than local use).
 
-    ```bash
-    mysql -u root -p < sql/03_triggers.sql
-    ```
-
-    ```bash
-    mysql -u root -p < sql/04_seed.sql
-    ```
-
-2. Create a `.env` file in the project root:
-
-    ```
-    DATABASE_URL=mysql+pymysql://root:<your-password>@localhost:3306/placement_db
-    SECRET_KEY=<a long random string>
-    ```
-
-3. Start the app with `python run.py`.
-
-### Default login
-
-An admin account is created on first run: username `admin`, password `admin123`. **Change this password before using the app anywhere other than your own machine.** Students create their own accounts from the Register page.
-
-## Database design
-
-| Table | Holds |
+| Role | Username |
 |---|---|
-| `users` | Login accounts with a role (admin or student) |
-| `students` | Academic profile: roll number, branch, CGPA, backlogs, placement status |
-| `companies` | Recruiters, role, package (LPA), eligibility rules, visit date, status |
-| `applications` | Student ↔ company link (many-to-many) with the application status |
-| `results` | Final outcome for an application (Selected / Not Selected) |
+| Super admin | `superadmin` |
+| College admin | `tiet_admin`, `dit_admin` |
+| Student | `aarav_tiet`, `diya_tiet`, `rohan_tiet`, `neha_dit`, … |
 
-| Stored procedure | Purpose |
-|---|---|
-| `check_eligibility` | Is this student eligible for this company? |
-| `apply_to_company` | Validate and create an application |
-| `get_eligible_companies` | Companies a student may apply to |
-| `get_placement_report` | Company-wise report with joins and aggregates |
-| `get_eligibility_list` | Eligible students for a company |
-| `record_result` | Record a final result |
+## Tests
 
-The full design, ER diagram and testing are in [`PROJECT_REPORT.md`](PROJECT_REPORT.md) (also available as PDF).
+```bash
+pytest --cov=app
+```
+
+CI runs lint, the migrations (upgrade, seed, downgrade) and the test suite against PostgreSQL, and builds the frontend.
 
 ## Project structure
 
 ```
-├── run.py                 Entry point
-├── requirements.txt
 ├── app/
-│   ├── __init__.py        App factory, login manager, default admin
-│   ├── config.py          Settings (database URL, secret key)
-│   ├── models.py          SQLAlchemy models for the five tables
-│   ├── routes/            auth, admin, student and reports blueprints
-│   ├── templates/         Pages for each role
-│   └── static/            CSS and JavaScript
-├── sql/                   MySQL schema, procedures, triggers and seed data
-└── PROJECT_REPORT.md      Project report
+│   ├── api/          REST endpoints (auth, student, admin, super admin)
+│   ├── services/     Business logic: eligibility, applications, accounts, companies, reports
+│   ├── models/       SQLAlchemy models
+│   ├── tasks/        Celery tasks
+│   ├── tenancy.py    Per-college data isolation
+│   ├── security.py   JWT authentication and role checks
+│   └── cli.py        `flask seed`
+├── migrations/       Alembic migrations
+├── frontend/         React app
+├── tests/            pytest suite
+├── sql/              Original MySQL course scripts (procedures and triggers; superseded by migrations)
+├── docker-compose.yml
+└── PROJECT_REPORT.md Original DBMS course report
 ```
