@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Pencil, Trash2, CheckCircle2, Users } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, CheckCircle2, Users, FileUp } from "lucide-react";
 import { api } from "@/utils/api";
 import { Modal } from "@/components/ui/Modal";
+import { ImportStudents } from "./ImportStudents";
 import { Alert, Field, GhostButton, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
 
 const BRANCHES = ["CSE", "ECE", "ME", "CE", "EE", "CHE"];
@@ -14,6 +15,7 @@ export function AdminStudents() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null); // null = closed, {} = new, student = edit
   const [notice, setNotice] = useState(null);
+  const [importing, setImporting] = useState(false);
 
   const load = () => api.get("/admin/students").then(setStudents).finally(() => setLoading(false));
   useEffect(() => { load(); }, []);
@@ -59,6 +61,9 @@ export function AdminStudents() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <GhostButton onClick={() => setImporting(true)}>
+            <FileUp className="w-3.5 h-3.5" /> Import CSV
+          </GhostButton>
           <PrimaryButton onClick={() => setEditing({})}>
             <Plus className="w-3.5 h-3.5" /> Add Student
           </PrimaryButton>
@@ -149,6 +154,12 @@ export function AdminStudents() {
           </table>
         </div>
       </div>
+
+      <ImportStudents
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImported={(job) => { setNotice({ type: "success", text: `Imported ${job.created_count} students from ${job.filename}.` }); load(); }}
+      />
 
       <StudentForm
         student={editing}

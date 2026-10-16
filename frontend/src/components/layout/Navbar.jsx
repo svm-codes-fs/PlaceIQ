@@ -1,24 +1,20 @@
-import { Search } from "lucide-react";
+import { Building2 } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 
 const ROLE_LABELS = { student: "Student", college_admin: "College Admin", super_admin: "Super Admin" };
 
 export function Navbar({ user }) {
   return (
     <header className="h-20 bg-background/40 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30 flex items-center justify-between px-8 lg:px-12">
-      <div className="flex-1 flex items-center gap-4">
-        <div className="relative hidden md:block w-64">
-          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input 
-            type="text" 
-            placeholder="Search platform..." 
-            className="w-full bg-surface border border-white/5 rounded-full py-2 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-white/10 focus:ring-1 focus:ring-white/10 transition-all placeholder:text-gray-600"
-          />
-        </div>
+      <div className="flex-1 flex items-center gap-3 min-w-0">
+        <Building2 className="w-4 h-4 text-gray-600 shrink-0" />
+        <p className="text-sm text-gray-400 truncate">{user?.college ? user.college.name : "PlaceIQ platform"}</p>
       </div>
-      
-      <div className="flex items-center gap-6">
-        
-        <div className="flex items-center gap-3 group">
+
+      <div className="flex items-center gap-5">
+        {user?.role !== "super_admin" && <NotificationBell />}
+
+        <div className="flex items-center gap-3 pl-5 border-l border-white/10 group">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-white leading-none tracking-wide">{user?.username}</p>
             <p className="text-xs text-primaryLight uppercase tracking-widest mt-1.5">

@@ -7,6 +7,7 @@ Defaults are only suitable for local development.
 import os
 from datetime import timedelta
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -52,13 +53,38 @@ class Config:
 
     # Celery / Redis
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    CELERY_EAGER = _bool('CELERY_TASK_ALWAYS_EAGER')
     CELERY = {
         'broker_url': os.environ.get('CELERY_BROKER_URL', REDIS_URL),
         'result_backend': os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL),
         'task_ignore_result': True,
         # Run tasks inline when no broker is available (local dev without Redis)
-        'task_always_eager': _bool('CELERY_TASK_ALWAYS_EAGER'),
+        'task_always_eager': CELERY_EAGER,
+        'beat_schedule': {
+            'expire-offers': {'task': 'app.tasks.jobs.expire_offers', 'schedule': crontab(minute=0)},
+            'interview-reminders': {'task': 'app.tasks.jobs.interview_reminders',
+                                    'schedule': crontab(hour=8, minute=0)},
+        },
+        'timezone': 'Asia/Kolkata',
     }
+
+    # Real-time push (app/realtime.py). Workers reach browsers through Redis unless tasks run inline.
+    SOCKETIO_MESSAGE_QUEUE = os.environ.get('SOCKETIO_MESSAGE_QUEUE') or (None if CELERY_EAGER else REDIS_URL)
+    SOCKETIO_CORS_ORIGINS = [o for o in os.environ.get(
+        'CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',') if o]
+
+    # Notifications and email
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+    OFFER_EXPIRY_DAYS = int(os.environ.get('OFFER_EXPIRY_DAYS', 7))
+    EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'console')  # console | smtp
+    MAIL_HOST = os.environ.get('MAIL_HOST', 'localhost')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS = _bool('MAIL_USE_TLS', 'true')
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME', '')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
+    MAIL_FROM = os.environ.get('MAIL_FROM', 'PlaceIQ <no-reply@placeiq.dev>')
+
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # uploads (resumes, CSV imports)
 
 
 class DevelopmentConfig(Config):
@@ -70,7 +96,9 @@ class TestingConfig(Config):
     """Used by pytest. TEST_DATABASE_URL points CI at PostgreSQL."""
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL', 'sqlite://')
-    CELERY = {**Config.CELERY, 'task_always_eager': True}
+    CELERY = {**Config.CELERY, 'task_always_eager': True, 'task_eager_propagates': True}
+    SOCKETIO_MESSAGE_QUEUE = None
+    EMAIL_BACKEND = 'console'
 
 
 class ProductionConfig(Config):

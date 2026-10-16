@@ -2,3 +2,6 @@
 pytest==8.4.1
 pytest-cov==6.2.1
 ruff==0.12.4
+Faker==40.43.0
+locust==2.46.7
+reportlab==5.0.1

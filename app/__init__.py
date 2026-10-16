@@ -6,6 +6,7 @@ Layout:
     app/services/  business logic (eligibility, application workflow, accounts, reports)
     app/models/    SQLAlchemy models (schema managed by Alembic in migrations/)
     app/tasks/     Celery background tasks
+    app/realtime.py Socket.IO live notifications
     app/tenancy.py per-college data isolation
     app/security.py JWT authentication
 """
@@ -41,9 +42,11 @@ def create_app(config_name=None):
     from app.api import api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    # Background jobs
+    # Background jobs and real-time push
     from app.tasks import celery_init_app
     celery_init_app(app)
+    from app.realtime import init_realtime
+    init_realtime(app)
 
     from app.cli import register_cli
     register_cli(app)

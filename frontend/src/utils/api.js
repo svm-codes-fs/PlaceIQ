@@ -21,7 +21,7 @@ function getCookie(name) {
 
 let refreshing = null;
 
-function refreshSession() {
+export function refreshSession() {
   if (!refreshing) {
     refreshing = fetch("/api/auth/refresh", {
       method: "POST",
@@ -35,7 +35,7 @@ function refreshSession() {
   return refreshing;
 }
 
-export async function api(path, { method = "GET", body, retry = true } = {}) {
+export async function api(path, { method = "GET", body, form, retry = true } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (method !== "GET") {
@@ -47,11 +47,12 @@ export async function api(path, { method = "GET", body, retry = true } = {}) {
     method,
     headers,
     credentials: "same-origin",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    // `form` is a FormData for file uploads; the browser sets its multipart Content-Type
+    body: form ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
 
   if (res.status === 401 && retry && !NO_REFRESH.includes(path)) {
-    if (await refreshSession()) return api(path, { method, body, retry: false });
+    if (await refreshSession()) return api(path, { method, body, form, retry: false });
     window.dispatchEvent(new Event("auth:expired"));
   }
 
@@ -64,6 +65,11 @@ api.get = (path) => api(path);
 api.post = (path, body = {}) => api(path, { method: "POST", body });
 api.put = (path, body = {}) => api(path, { method: "PUT", body });
 api.del = (path) => api(path, { method: "DELETE" });
+api.upload = (path, file, field = "file") => {
+  const form = new FormData();
+  form.append(field, file);
+  return api(path, { method: "POST", form });
+};
 
 // Landing page for each role
 export const HOME = { student: "/student", college_admin: "/admin", super_admin: "/super" };

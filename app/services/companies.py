@@ -83,6 +83,10 @@ def create_company(data):
     company = Company(**_validate(data, partial=False))
     db.session.add(company)
     db.session.commit()
+
+    from app.tasks import enqueue
+    from app.tasks.jobs import notify_new_drive
+    enqueue(notify_new_drive, company.id)
     return company
 
 
