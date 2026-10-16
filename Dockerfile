@@ -17,4 +17,5 @@ RUN useradd --create-home appuser
 USER appuser
 
 EXPOSE 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--preload", "run:app"]
+# One worker with many threads: Socket.IO connections must stay on the process that accepted them
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "64", "run:app"]

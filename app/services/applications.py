@@ -99,6 +99,10 @@ def transition(application, new_status, actor, user=None, note=None):
     record_event(application, old_status, new_status, user=user,
                  actor_role='system' if actor == 'system' else None, note=note)
     db.session.commit()
+
+    from app.tasks import enqueue
+    from app.tasks.jobs import notify_status_change
+    enqueue(notify_status_change, application.id)
     return application
 
 

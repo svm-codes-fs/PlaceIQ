@@ -1,17 +1,20 @@
 """College admin endpoints. Every query here is limited to the admin's college by app/tenancy.py."""
-from flask import jsonify, request
+from flask import Response, jsonify, request
 from flask_jwt_extended import current_user
 
 from app.api import api_bp
 from app.api.serializers import application_json, company_json, student_json
 from app.extensions import db
-from app.models import Application, Company, Student
+from app.models import Application, Company, ImportJob, Student
 from app.security import roles_required
 from app.services import reports
 from app.services.accounts import create_student, update_student
 from app.services.applications import allowed_transitions, timeline, transition
 from app.services.companies import create_company, eligible_students, update_company
 from app.services.policies import list_policies, save_policy
+from app.services.imports import TEMPLATE
+from app.tasks import enqueue
+from app.tasks.jobs import import_students
 from app.tenancy import current_college_id
 
 admin_only = roles_required('college_admin')
@@ -61,6 +64,38 @@ def admin_delete_student(student_id):
     db.session.delete(student.user)  # cascades to the profile and applications
     db.session.commit()
     return jsonify({'message': f'Deleted {student.name}.'})
+
+
+@api_bp.route('/admin/students/import', methods=['POST'])
+@admin_only
+def admin_import_students():
+    """Upload a CSV of students; a background worker validates and imports it."""
+    upload = request.files.get('file')
+    if not upload or not upload.filename.lower().endswith('.csv'):
+        return jsonify({'error': 'Choose a .csv file to import.'}), 400
+    try:
+        content = upload.read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        return jsonify({'error': 'The file must be UTF-8 encoded CSV.'}), 400
+    job = ImportJob(filename=upload.filename, content=content, created_by=current_user.id)
+    db.session.add(job)
+    db.session.commit()
+    enqueue(import_students, job.id)
+    db.session.refresh(job)
+    return jsonify(job.to_json()), 202
+
+
+@api_bp.route('/admin/imports/<int:job_id>', methods=['GET'])
+@admin_only
+def admin_import_status(job_id):
+    return jsonify(db.get_or_404(ImportJob, job_id).to_json())
+
+
+@api_bp.route('/admin/students/import-template', methods=['GET'])
+@admin_only
+def admin_import_template():
+    return Response(TEMPLATE, mimetype='text/csv',
+                    headers={'Content-Disposition': 'attachment; filename=placeiq-students-template.csv'})
 
 
 # ---- Companies --------------------------------------------------------------

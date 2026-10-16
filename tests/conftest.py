@@ -44,6 +44,11 @@ class ApiClient:
         cookie = self.client.get_cookie(name)
         return {'X-CSRF-TOKEN': cookie.value} if cookie else {}
 
+    def socket_headers(self):
+        """Cookie header for a Socket.IO test connection (its test client ignores cookie paths)."""
+        cookie = self.client.get_cookie('access_token_cookie', path='/api/')
+        return {'Cookie': f'access_token_cookie={cookie.value}'} if cookie else {}
+
     def get(self, url):
         return self.client.get(url)
 
