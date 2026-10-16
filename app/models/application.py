@@ -1,7 +1,8 @@
 from app.extensions import db
 from app.models.college import TenantScoped, utcnow
 
-APPLICATION_STATUSES = ('Applied', 'Shortlisted', 'Interview', 'Offered', 'Accepted', 'Declined', 'Rejected')
+APPLICATION_STATUSES = ('Applied', 'Shortlisted', 'Interview', 'Offered', 'Accepted', 'Declined', 'Rejected',
+                        'Expired')
 
 
 class Application(TenantScoped, db.Model):
@@ -18,6 +19,7 @@ class Application(TenantScoped, db.Model):
     status = db.Column(db.Enum(*APPLICATION_STATUSES, name='application_status'),
                        nullable=False, default='Applied')
     offer_date = db.Column(db.Date)
+    offer_reminder_sent = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     remarks = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)

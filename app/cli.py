@@ -11,7 +11,8 @@ from flask import current_app
 from werkzeug.security import generate_password_hash
 
 from app.extensions import db
-from app.models import Application, College, Company, Student, User
+from app.models import Application, College, Company, PlacementPolicy, Student, User
+from app.services.applications import record_event
 from app.tenancy import college_context
 
 DEMO_COLLEGES = [
@@ -33,7 +34,9 @@ DEMO_COLLEGES = [
             ('Infosys', 'Systems Engineer', 6.5, 6.0, 1, 'CSE,ECE,ME,CE,EE,CHE', 'Completed', -30),
         ],
         # (student index, company index, status)
-        'applications': [(0, 2, 'Interview'), (3, 2, 'Offered'), (1, 4, 'Accepted'), (4, 4, 'Rejected')],
+        'applications': [(2, 2, 'Interview'), (3, 2, 'Offered'), (1, 4, 'Accepted'), (4, 4, 'Rejected')],
+        # rule type -> params; seeded enabled
+        'policies': {'max_offers': {'limit': 2}, 'dream_lock': {'dream_min_lpa': 20}},
     },
     {
         'name': 'Demo Institute of Technology', 'code': 'DIT', 'admin': 'dit_admin',
@@ -47,6 +50,7 @@ DEMO_COLLEGES = [
             ('L&T', 'Site Engineer', 7.2, 6.5, 0, 'CE,ME', 'Upcoming', 20),
         ],
         'applications': [(0, 0, 'Shortlisted')],
+        'policies': {'block_after_placement': {}},
     },
 ]
 
@@ -89,17 +93,37 @@ def seed_database():
                 db.session.add(company)
                 companies.append(company)
 
+            for rule_type, params in spec['policies'].items():
+                db.session.add(PlacementPolicy(rule_type=rule_type, params=params, enabled=True))
+
             db.session.flush()
             for s_idx, c_idx, status in spec['applications']:
                 student = students[s_idx]
                 offer_date = date.today() - timedelta(days=2) if status in ('Offered', 'Accepted') else None
-                db.session.add(Application(student_id=student.id, company_id=companies[c_idx].id,
-                                           status=status, offer_date=offer_date))
+                application = Application(student_id=student.id, company_id=companies[c_idx].id,
+                                          status=status, offer_date=offer_date)
+                db.session.add(application)
+                _seed_history(application, status)
+            db.session.flush()
+            for s_idx, c_idx, status in spec['applications']:
                 if status == 'Accepted':
-                    student.placement_status = 'Placed'
+                    students[s_idx].placement_status = 'Placed'
 
             db.session.commit()
     return True
+
+
+PIPELINE = ['Applied', 'Shortlisted', 'Interview', 'Offered']
+
+
+def _seed_history(application, final_status):
+    """Audit events leading up to a seeded application's status."""
+    path = PIPELINE[:PIPELINE.index(final_status) + 1] if final_status in PIPELINE else         (PIPELINE if final_status in ('Accepted', 'Declined') else ['Applied']) + [final_status]
+    previous = None
+    for status in path:
+        role = 'student' if status in ('Applied', 'Accepted', 'Declined') else 'college_admin'
+        record_event(application, previous, status, actor_role=role, note='Seeded history')
+        previous = status
 
 
 def register_cli(app):

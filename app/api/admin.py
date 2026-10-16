@@ -1,5 +1,6 @@
 """College admin endpoints. Every query here is limited to the admin's college by app/tenancy.py."""
 from flask import jsonify, request
+from flask_jwt_extended import current_user
 
 from app.api import api_bp
 from app.api.serializers import application_json, company_json, student_json
@@ -8,8 +9,9 @@ from app.models import Application, Company, Student
 from app.security import roles_required
 from app.services import reports
 from app.services.accounts import create_student, update_student
-from app.services.applications import allowed_transitions, transition
+from app.services.applications import allowed_transitions, timeline, transition
 from app.services.companies import create_company, eligible_students, update_company
+from app.services.policies import list_policies, save_policy
 from app.tenancy import current_college_id
 
 admin_only = roles_required('college_admin')
@@ -112,16 +114,38 @@ def admin_applications():
 @admin_only
 def update_application_status(app_id):
     application = db.get_or_404(Application, app_id)
-    transition(application, (request.get_json() or {}).get('status'), actor='admin')
+    data = request.get_json() or {}
+    transition(application, data.get('status'), actor='admin', user=current_user, note=data.get('note'))
     return jsonify({'message': 'Status updated successfully',
                     'application': application_json(application, allowed_transitions(application, 'admin'))})
+
+
+@api_bp.route('/admin/applications/<int:app_id>/timeline', methods=['GET'])
+@admin_only
+def admin_application_timeline(app_id):
+    return jsonify(timeline(db.get_or_404(Application, app_id)))
+
+
+# ---- Placement policies -----------------------------------------------------
+
+@api_bp.route('/admin/policies', methods=['GET'])
+@admin_only
+def admin_policies():
+    return jsonify(list_policies())
+
+
+@api_bp.route('/admin/policies/<rule_type>', methods=['PUT'])
+@admin_only
+def admin_save_policy(rule_type):
+    save_policy(rule_type, request.get_json() or {})
+    return jsonify(list_policies())
 
 
 @api_bp.route('/admin/results', methods=['GET'])
 @admin_only
 def admin_results():
     """Offers made: accepted, pending and declined."""
-    apps = (Application.query.filter(Application.status.in_(('Offered', 'Accepted', 'Declined')))
+    apps = (Application.query.filter(Application.status.in_(('Offered', 'Accepted', 'Declined', 'Expired')))
             .order_by(Application.offer_date.desc()).all())
     return jsonify([application_json(a) for a in apps])
 

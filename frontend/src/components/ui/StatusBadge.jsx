@@ -8,6 +8,7 @@ const STYLES = {
   Accepted: "bg-success/20 text-success",
   Declined: "bg-white/5 text-gray-500",
   Rejected: "bg-danger/20 text-danger",
+  Expired: "bg-white/5 text-gray-500",
   Upcoming: "bg-primary/20 text-primaryLight",
   Ongoing: "bg-warning/20 text-warning",
   Completed: "bg-white/10 text-gray-400",

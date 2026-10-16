@@ -7,8 +7,8 @@ from app.extensions import db
 from app.models import Application, Company
 from app.security import roles_required
 from app.services.accounts import update_student
-from app.services.applications import allowed_transitions, apply_to_company, transition
-from app.services.eligibility import eligibility_failures
+from app.services.applications import allowed_transitions, apply_to_company, timeline, transition
+from app.services.policies import PolicyEvaluator
 
 
 def _student():
@@ -21,12 +21,13 @@ def student_dashboard():
     student = _student()
     applications = student.applications
     applied_ids = {a.company_id for a in applications}
+    evaluator = PolicyEvaluator(student)
 
     # Upcoming drives the student is eligible for and hasn't applied to yet
     upcoming = [
         {**company_json(c), 'branches': ', '.join(c.get_branches_list())}
         for c in Company.query.filter_by(status='Upcoming').order_by(Company.visit_date).all()
-        if c.id not in applied_ids and not eligibility_failures(student, c)
+        if c.id not in applied_ids and not evaluator.failures(c)
     ]
 
     return jsonify({
@@ -45,10 +46,11 @@ def student_dashboard():
 def student_companies():
     student = _student()
     statuses = {a.company_id: a.status for a in student.applications}
+    evaluator = PolicyEvaluator(student)
 
     result = []
     for c in Company.query.order_by(Company.visit_date).all():
-        failures = eligibility_failures(student, c)
+        failures = evaluator.failures(c)
         result.append({
             **company_json(c),
             'is_eligible': not failures,
@@ -62,7 +64,7 @@ def student_companies():
 @roles_required('student')
 def student_apply(company_id):
     company = db.get_or_404(Company, company_id)
-    apply_to_company(_student(), company)
+    apply_to_company(_student(), company, user=current_user)
     return jsonify({'message': f'Successfully applied to {company.name}'}), 201
 
 
@@ -81,8 +83,17 @@ def respond_to_offer(app_id):
     if application.student_id != _student().id:
         return jsonify({'error': 'Not found'}), 404
     new_status = (request.get_json() or {}).get('status')
-    transition(application, new_status, actor='student')
+    transition(application, new_status, actor='student', user=current_user)
     return jsonify({'message': f'Offer {new_status.lower()}.', 'application': application_json(application)})
+
+
+@api_bp.route('/student/applications/<int:app_id>/timeline', methods=['GET'])
+@roles_required('student')
+def student_application_timeline(app_id):
+    application = db.get_or_404(Application, app_id)
+    if application.student_id != _student().id:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify(timeline(application))
 
 
 @api_bp.route('/student/profile', methods=['GET', 'PUT'])
