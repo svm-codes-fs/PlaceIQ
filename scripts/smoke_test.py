@@ -7,6 +7,7 @@ the Celery worker through Redis and finishes.
 
     python scripts/smoke_test.py http://localhost:5000
 """
+import os
 import sys
 import time
 
@@ -19,6 +20,8 @@ PASSWORD = 'password123'
 def check(condition, message):
     if not condition:
         print(f'FAIL: {message}')
+        if os.environ.get('GITHUB_ACTIONS'):
+            print(f'::error title=Smoke test::{message}')  # visible in the run summary without signing in
         sys.exit(1)
     print(f'ok   {message}')
 
@@ -42,13 +45,16 @@ def main():
     check(requests.get(f'{BASE}/api/health', timeout=5).json() == {'status': 'ok'}, 'health check')
 
     admin = login('tiet_admin')
-    students = admin.get(f'{BASE}/api/admin/students', timeout=30).json()
-    check(students['total'] == 6, 'seeded TIET students visible to their admin')
+    students = admin.get(f'{BASE}/api/admin/students?per_page=200', timeout=30).json()
+    tiet_rolls = {s['roll_no'] for s in students['items']}
+    check({'102203001', '102203006'} <= tiet_rolls, 'seeded TIET students visible to their admin')
     dit = login('dit_admin')
-    check(dit.get(f'{BASE}/api/admin/students', timeout=30).json()['total'] == 3, 'DIT admin sees only DIT students')
+    dit_rolls = {s['roll_no'] for s in dit.get(f'{BASE}/api/admin/students?per_page=200', timeout=30).json()['items']}
+    check('DIT2201' in dit_rolls and not dit_rolls & tiet_rolls, 'DIT admin sees only DIT students')
 
     r = requests.get(f'{BASE}/api/socket.io/?EIO=4&transport=polling', timeout=10)
-    check(r.status_code == 200 and r.text[1:2] == '0', 'Socket.IO handshake answers')
+    # Engine.IO v4 polling handshake: an "open" packet, i.e. '0' followed by JSON with the session id
+    check(r.status_code == 200 and r.text.startswith('0{'), 'Socket.IO handshake answers')
 
     csv = 'username,email,name,roll_no,branch,cgpa,backlogs,password\nsmoke1,smoke1@example.com,Smoke Test,SMOKE01,CSE,8.0,0,smokepass123\n'
     r = admin.post(f'{BASE}/api/admin/students/import', files={'file': ('smoke.csv', csv, 'text/csv')}, timeout=30)

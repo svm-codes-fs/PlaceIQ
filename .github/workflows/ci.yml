@@ -88,6 +88,12 @@ jobs:
           python scripts/smoke_test.py http://localhost
       - name: Logs on failure
         if: failure()
-        run: docker compose -f docker-compose.prod.yml logs --tail 200
+        run: |
+          docker compose -f docker-compose.prod.yml ps
+          docker compose -f docker-compose.prod.yml logs --no-color --tail 80 api worker web > container-logs.txt
+          cat container-logs.txt
+          # Also as an annotation, readable on the run page without signing in
+          python3 -c "t=open('container-logs.txt').read()[-6000:]; print('::error title=Container logs::' + t.replace('%','%25').replace('','').replace('
+','%0A'))"
       - name: Development stack builds
         run: docker compose build api frontend
