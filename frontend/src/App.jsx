@@ -13,6 +13,7 @@ import { AdminCompanies } from "./pages/admin/AdminCompanies";
 import { AdminApplications } from "./pages/admin/AdminApplications";
 import { AdminResults } from "./pages/admin/AdminResults";
 import { AdminReports } from "./pages/admin/AdminReports";
+import { AdminPolicies } from "./pages/admin/AdminPolicies";
 import { SuperColleges } from "./pages/super/SuperColleges";
 import { api, HOME } from "./utils/api";
 
@@ -71,6 +72,7 @@ function App() {
             <Route path="/admin/applications" element={<AdminApplications />} />
             <Route path="/admin/results" element={<AdminResults />} />
             <Route path="/admin/reports" element={<AdminReports />} />
+            <Route path="/admin/policies" element={<AdminPolicies />} />
             <Route path="/admin/*" element={<Navigate to="/admin" />} />
           </Route>
 

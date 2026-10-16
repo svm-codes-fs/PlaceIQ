@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Briefcase, FileText, Trophy, BarChart, User, LogOut, Hexagon, Building2 } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, Trophy, BarChart, User, LogOut, Hexagon, Building2, ShieldCheck } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { motion } from "framer-motion";
 import { HOME } from "@/utils/api";
@@ -30,6 +30,7 @@ const NAV_SECTIONS = {
       items: [
         { name: "Students", path: "/admin/students", icon: Users },
         { name: "Companies", path: "/admin/companies", icon: Briefcase },
+        { name: "Policies", path: "/admin/policies", icon: ShieldCheck },
       ]
     },
     { title: "ANALYTICS", items: [{ name: "Reports", path: "/admin/reports", icon: BarChart }] }

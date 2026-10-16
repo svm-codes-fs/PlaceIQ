@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, History } from "lucide-react";
 import { api } from "@/utils/api";
 import { Alert } from "@/components/ui/Form";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Modal } from "@/components/ui/Modal";
+import { Timeline } from "@/components/ui/Timeline";
 
 // Button label for each move the state machine allows
 const ACTION_LABELS = {
@@ -19,6 +21,7 @@ export function AdminApplications() {
   const [search, setSearch] = useState("");
   const [updating, setUpdating] = useState(null);
   const [error, setError] = useState(null);
+  const [historyFor, setHistoryFor] = useState(null);
 
   const fetchApplications = () =>
     api.get("/admin/applications").then(setApplications).finally(() => setLoading(false));
@@ -114,6 +117,10 @@ export function AdminApplications() {
                           <p className="font-semibold text-sm text-white">{app.student_name}</p>
                           <p className="text-[10px] text-gray-600">{app.student_roll}</p>
                         </div>
+                        <button onClick={() => setHistoryFor(app)} aria-label={`History of ${app.student_name}'s application to ${app.company_name}`}
+                          title="History" className="ml-auto p-1.5 rounded-lg text-gray-600 hover:text-white hover:bg-white/10">
+                          <History className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
@@ -153,6 +160,10 @@ export function AdminApplications() {
           </div>
         )}
       </div>
+      <Modal open={!!historyFor} onClose={() => setHistoryFor(null)} title="Application history"
+        subtitle={historyFor && `${historyFor.student_name} · ${historyFor.company_name}`}>
+        {historyFor && <Timeline url={`/admin/applications/${historyFor.id}/timeline`} />}
+      </Modal>
     </div>
   );
 }

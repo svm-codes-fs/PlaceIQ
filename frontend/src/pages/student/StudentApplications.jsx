@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock, Circle } from "lucide-react";
+import { CheckCircle2, Clock, Circle, History } from "lucide-react";
 import { api } from "@/utils/api";
 import { Alert, errorMessage } from "@/components/ui/Form";
+import { Timeline } from "@/components/ui/Timeline";
 
 const PIPELINE_STAGES = ['Applied', 'Shortlisted', 'Interview', 'Offered'];
 
@@ -11,6 +12,7 @@ export function StudentApplications() {
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState(null);
   const [message, setMessage] = useState(null);
+  const [historyFor, setHistoryFor] = useState(null);
 
   const load = () => api.get("/student/applications").then(setApplications).finally(() => setLoading(false));
   useEffect(() => { load(); }, []);
@@ -57,7 +59,7 @@ export function StudentApplications() {
           applications.map((app, i) => {
             const stageIdx = getStageIndex(app.status);
             const isRejected = app.status === 'Rejected';
-            const isDeclined = app.status === 'Declined';
+            const isDeclined = app.status === 'Declined' || app.status === 'Expired';
             const isOffered = app.status === 'Offered';
             const isAccepted = app.status === 'Accepted';
 
@@ -100,7 +102,7 @@ export function StudentApplications() {
                 ) : isDeclined ? (
                   <div className="flex items-center gap-3 px-5 py-4 bg-white/5 border border-white/10 rounded-2xl">
                     <span className="w-2 h-2 rounded-full bg-gray-500 shrink-0" />
-                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Offer Declined</p>
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{app.status === 'Expired' ? 'Offer Expired' : 'Offer Declined'}</p>
                   </div>
                 ) : isAccepted ? (
                   <div className="flex items-center gap-3 px-5 py-4 bg-success/10 border border-success/20 rounded-2xl">
@@ -158,6 +160,19 @@ export function StudentApplications() {
                     })}
                   </div>
                 )}
+
+                <div className="mt-6 border-t border-white/5 pt-4">
+                  <button
+                    onClick={() => setHistoryFor(historyFor === app.id ? null : app.id)}
+                    aria-expanded={historyFor === app.id}
+                    className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-500 hover:text-white"
+                  >
+                    <History className="h-3.5 w-3.5" /> {historyFor === app.id ? "Hide history" : "View history"}
+                  </button>
+                  {historyFor === app.id && (
+                    <div className="mt-4"><Timeline url={`/student/applications/${app.id}/timeline`} /></div>
+                  )}
+                </div>
               </motion.div>
             );
           })

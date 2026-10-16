@@ -6,7 +6,7 @@ Set TEST_DATABASE_URL to run against PostgreSQL (CI does); default is in-memory 
 """
 import pytest
 
-from app import create_app, db
+from app import create_app, db, db_rules
 from app.cli import seed_database
 
 PASSWORD = 'password123'
@@ -17,7 +17,12 @@ def app():
     app = create_app('testing')
     app.config['SEED_PASSWORD'] = PASSWORD
     with app.app_context():
+        if db.engine.dialect.name == 'postgresql':
+            with db.engine.begin() as conn:
+                conn.exec_driver_sql('CREATE EXTENSION IF NOT EXISTS vector')
         db.create_all()
+        with db.engine.begin() as conn:
+            db_rules.install(conn)  # PostgreSQL trigger; no-op on SQLite
         seed_database()
     # No app context is held open during requests, so each request gets its own `g`
     yield app
