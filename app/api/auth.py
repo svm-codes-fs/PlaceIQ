@@ -11,6 +11,13 @@ from app.services.accounts import create_student
 from app.tenancy import college_context
 
 
+@api_bp.route('/health', methods=['GET'])
+def health():
+    """Liveness and database check for load balancers and uptime monitors."""
+    db.session.execute(db.text('SELECT 1'))
+    return jsonify({'status': 'ok'})
+
+
 @api_bp.route('/auth/login', methods=['POST'])
 def login():
     data = request.get_json() or {}

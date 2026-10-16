@@ -25,6 +25,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg://placeiq:placeiq@localhost:5432/placeiq
       TEST_DATABASE_URL: postgresql+psycopg://placeiq:placeiq@localhost:5432/placeiq
       CELERY_TASK_ALWAYS_EAGER: "true"
+      EMBEDDING_BACKEND: hash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,7 +35,7 @@ jobs:
           cache-dependency-path: requirements*.txt
       - run: pip install -r requirements-dev.txt
       - name: Lint
-        run: ruff check app tests
+        run: ruff check app tests scripts benchmarks
       - name: Migrations apply, seed and roll back cleanly
         run: |
           flask db upgrade
@@ -57,3 +58,36 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  # Builds the production images and runs the whole stack (nginx, gunicorn,
+  # Celery worker and beat, PostgreSQL + pgvector, Redis), then smoke-tests it
+  # through nginx, including a background job that must go through Redis.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write CI environment
+        run: |
+          cat > .env <<'EOF'
+          SECRET_KEY=ci-secret-key-0123456789abcdef0123456789
+          JWT_SECRET_KEY=ci-jwt-secret-0123456789abcdef0123456789
+          POSTGRES_USER=placeiq
+          POSTGRES_PASSWORD=placeiq-ci
+          POSTGRES_DB=placeiq
+          SEED_DEMO=true
+          SEED_PASSWORD=password123
+          JWT_COOKIE_SECURE=false
+          EMBEDDING_BACKEND=hash
+          CORS_ORIGINS=http://localhost
+          EOF
+      - name: Build and start the production stack
+        run: docker compose -f docker-compose.prod.yml up -d --build
+      - name: Smoke test through nginx
+        run: |
+          pip install requests
+          python scripts/smoke_test.py http://localhost
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.prod.yml logs --tail 200
+      - name: Development stack builds
+        run: docker compose build api frontend
