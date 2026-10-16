@@ -13,9 +13,10 @@ PASSWORD = 'password123'
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     app = create_app('testing')
     app.config['SEED_PASSWORD'] = PASSWORD
+    app.config['UPLOAD_DIR'] = str(tmp_path / 'uploads')
     with app.app_context():
         if db.engine.dialect.name == 'postgresql':
             with db.engine.begin() as conn:

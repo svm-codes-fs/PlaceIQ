@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models.college import TenantScoped, utcnow
+from app.models.vector import EmbeddingType
 
 BRANCHES = ('CSE', 'ECE', 'ME', 'CE', 'EE', 'CHE')
 
@@ -19,6 +20,11 @@ class Student(TenantScoped, db.Model):
     backlogs = db.Column(db.Integer, nullable=False, default=0)
     placement_status = db.Column(db.Enum('Unplaced', 'Placed', name='placement_status'),
                                  nullable=False, default='Unplaced')
+    # Profile used for job matching: confirmed by the student after resume parsing
+    skills = db.Column(db.JSON, nullable=False, default=list)
+    profile_summary = db.Column(db.Text)
+    embedding = db.deferred(db.Column(EmbeddingType))
+    embedding_model = db.Column(db.String(80))
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 

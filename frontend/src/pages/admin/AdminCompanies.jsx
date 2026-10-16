@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, Briefcase, Pencil, Trash2, Users } from "lucide-react";
+import { Search, Plus, Briefcase, Pencil, Trash2, Users, Sparkles } from "lucide-react";
 import { api } from "@/utils/api";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert, Field, GhostButton, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
+import { SkillInput } from "@/components/ui/SkillInput";
+import { CompanyCandidates } from "./CompanyCandidates";
 
 const BRANCHES = ["CSE", "ECE", "ME", "CE", "EE", "CHE"];
 const STATUSES = ["Upcoming", "Ongoing", "Completed"];
 const EMPTY = {
   name: "", role_offered: "", description: "", package_lpa: "", min_cgpa: "0", max_backlogs: "0",
-  allowed_branches: [...BRANCHES], visit_date: "", status: "Upcoming",
+  allowed_branches: [...BRANCHES], required_skills: [], visit_date: "", status: "Upcoming",
 };
 
 export function AdminCompanies() {
@@ -19,6 +21,7 @@ export function AdminCompanies() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
   const [eligibleFor, setEligibleFor] = useState(null);
+  const [candidatesFor, setCandidatesFor] = useState(null);
   const [notice, setNotice] = useState(null);
 
   const load = () => api.get("/admin/companies").then(setCompanies).finally(() => setLoading(false));
@@ -126,6 +129,10 @@ export function AdminCompanies() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1">
+                        <button onClick={() => setCandidatesFor(company)} aria-label={`Top candidates for ${company.name}`} title="Top candidates (AI match)"
+                          className="p-1.5 text-gray-600 hover:text-primaryLight transition-colors rounded-lg hover:bg-white/10">
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </button>
                         <button onClick={() => setEligibleFor(company)} aria-label={`Eligible students for ${company.name}`} title="Eligible students"
                           className="p-1.5 text-gray-600 hover:text-primaryLight transition-colors rounded-lg hover:bg-white/10">
                           <Users className="w-3.5 h-3.5" />
@@ -154,6 +161,7 @@ export function AdminCompanies() {
         onSaved={(text) => { setEditing(null); setNotice({ type: "success", text }); load(); }}
       />
       <EligibleStudents company={eligibleFor} onClose={() => setEligibleFor(null)} />
+      <CompanyCandidates company={candidatesFor} onClose={() => setCandidatesFor(null)} />
     </div>
   );
 }
@@ -190,8 +198,8 @@ function CompanyForm({ company, onClose, onSaved }) {
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const { name, role_offered, description, package_lpa, min_cgpa, max_backlogs, allowed_branches, visit_date, status } = form;
-    const body = { name, role_offered, description, package_lpa, min_cgpa, max_backlogs, allowed_branches, visit_date, status };
+    const { name, role_offered, description, package_lpa, min_cgpa, max_backlogs, allowed_branches, required_skills, visit_date, status } = form;
+    const body = { name, role_offered, description, package_lpa, min_cgpa, max_backlogs, allowed_branches, required_skills, visit_date, status };
     try {
       if (isNew) await api.post("/admin/companies", body);
       else await api.put(`/admin/companies/${company.id}`, body);
@@ -230,6 +238,9 @@ function CompanyForm({ company, onClose, onSaved }) {
             })}
           </div>
         </fieldset>
+        <Field label="Required skills" hint="Used to rank candidates and show students which skills they're missing">
+          <SkillInput value={form.required_skills} onChange={(v) => setForm((f) => ({ ...f, required_skills: v }))} label="Required skills" />
+        </Field>
         <Field label="Description (optional)">
           <textarea rows={3} value={form.description} onChange={set("description")}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />

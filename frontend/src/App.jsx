@@ -7,6 +7,8 @@ import { StudentDashboard } from "./pages/student/StudentDashboard";
 import { StudentCompanies } from "./pages/student/StudentCompanies";
 import { StudentApplications } from "./pages/student/StudentApplications";
 import { StudentProfile } from "./pages/student/StudentProfile";
+import { StudentResume } from "./pages/student/StudentResume";
+import { StudentMatches } from "./pages/student/StudentMatches";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminStudents } from "./pages/admin/AdminStudents";
 import { AdminCompanies } from "./pages/admin/AdminCompanies";
@@ -62,6 +64,8 @@ function App() {
             <Route path="/student/companies" element={<StudentCompanies />} />
             <Route path="/student/applications" element={<StudentApplications />} />
             <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/resume" element={<StudentResume />} />
+            <Route path="/student/matches" element={<StudentMatches />} />
             <Route path="/student/*" element={<Navigate to="/student" />} />
           </Route>
 

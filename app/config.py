@@ -85,6 +85,18 @@ class Config:
     MAIL_FROM = os.environ.get('MAIL_FROM', 'PlaceIQ <no-reply@placeiq.dev>')
 
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # uploads (resumes, CSV imports)
+    UPLOAD_DIR = os.environ.get('UPLOAD_DIR', os.path.join(BASE_DIR, 'instance', 'uploads'))
+
+    # AI features (app/services/ai.py). Without a key, offline heuristics are used instead.
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+    AI_ENABLED = _bool('AI_ENABLED')  # true to use `ant auth login` credentials instead of a key
+    AI_RESUME_MODEL = os.environ.get('AI_RESUME_MODEL', 'claude-opus-5-5')
+    AI_INTERVIEW_MODEL = os.environ.get('AI_INTERVIEW_MODEL', 'claude-opus-5-5')
+    AI_SCORING_MODEL = os.environ.get('AI_SCORING_MODEL', 'claude-opus-5-5')
+
+    # Embeddings for job matching (app/services/embeddings.py): auto | fastembed | hash
+    EMBEDDING_BACKEND = os.environ.get('EMBEDDING_BACKEND', 'auto')
+    FASTEMBED_CACHE_DIR = os.environ.get('FASTEMBED_CACHE_DIR') or None
 
 
 class DevelopmentConfig(Config):
@@ -99,6 +111,9 @@ class TestingConfig(Config):
     CELERY = {**Config.CELERY, 'task_always_eager': True, 'task_eager_propagates': True}
     SOCKETIO_MESSAGE_QUEUE = None
     EMAIL_BACKEND = 'console'
+    EMBEDDING_BACKEND = 'hash'
+    ANTHROPIC_API_KEY = ''
+    AI_ENABLED = False
 
 
 class ProductionConfig(Config):

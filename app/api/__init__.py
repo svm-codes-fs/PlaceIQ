@@ -36,4 +36,4 @@ def _not_found(_e):
 
 
 # Register routes on api_bp
-from app.api import auth, student, admin, superadmin, notifications  # noqa: E402,F401
+from app.api import auth, student, admin, superadmin, notifications, profile  # noqa: E402,F401

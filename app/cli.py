@@ -80,16 +80,19 @@ def seed_database():
                 email = f'{username}@placeiq.dev'
                 user = User(username=username, email=email, role='student', college_id=college.id,
                             password_hash=password_hash)
+                skills, summary = STUDENT_PROFILES.get(name, ([], None))
                 user.student = Student(roll_no=roll_no, name=name, email=email, branch=branch,
-                                       cgpa=cgpa, backlogs=backlogs)
+                                       cgpa=cgpa, backlogs=backlogs, skills=skills, profile_summary=summary)
                 db.session.add(user)
                 students.append(user.student)
 
             companies = []
             for name, role, package, min_cgpa, max_backlogs, branches, status, days in spec['companies']:
+                required, description = DRIVE_DETAILS.get(name, ([], None))
                 company = Company(name=name, role_offered=role, package_lpa=package, min_cgpa=min_cgpa,
                                   max_backlogs=max_backlogs, allowed_branches=branches, status=status,
-                                  visit_date=date.today() + timedelta(days=days))
+                                  visit_date=date.today() + timedelta(days=days),
+                                  required_skills=required, description=description)
                 db.session.add(company)
                 companies.append(company)
 
@@ -112,6 +115,44 @@ def seed_database():
             db.session.commit()
     return True
 
+
+# Required skills and descriptions for the seeded drives (used by job matching)
+DRIVE_DETAILS = {
+    'Microsoft': (['Data Structures', 'System Design', 'C++', 'Python', 'Azure'],
+                  'Build large-scale cloud services. Strong problem solving, algorithms and distributed systems.'),
+    'Amazon': (['Java', 'Data Structures', 'System Design', 'AWS', 'SQL'],
+               'Design and ship backend services for retail and AWS products; ownership of microservices.'),
+    'Texas Instruments': (['Analog Circuits', 'Digital Electronics', 'Verilog', 'MATLAB', 'Embedded C'],
+                          'Analog and mixed-signal IC design: circuit simulation, layout reviews, silicon validation.'),
+    'Tata Motors': (['SolidWorks', 'AutoCAD', 'Manufacturing', 'Thermodynamics', 'ANSYS'],
+                    'Vehicle design and production engineering: CAD modelling, simulation and plant processes.'),
+    'Infosys': (['Java', 'SQL', 'OOP', 'Communication'],
+                'Develop and maintain enterprise applications for global clients after a training programme.'),
+    'Wipro': (['Java', 'SQL', 'OOP', 'Communication'],
+              'Project engineer for application development and support on client engagements.'),
+    'L&T': (['AutoCAD', 'STAAD Pro', 'Structural Analysis', 'Project Management'],
+            'Site engineering for infrastructure projects: structural drawings, quantities and site execution.'),
+}
+
+# Confirmed matching profiles for the seeded students
+STUDENT_PROFILES = {
+    'Aarav Sharma': (['Python', 'C++', 'Data Structures', 'System Design', 'React', 'PostgreSQL', 'Docker'],
+                     'Backend-focused developer. Built a distributed URL shortener with caching and a React '
+                     'dashboard; ICPC regionalist.'),
+    'Diya Verma': (['Java', 'Spring Boot', 'SQL', 'AWS', 'Data Structures', 'Microservices'],
+                   'Java developer; interned on payment microservices deployed on AWS.'),
+    'Kabir Singh': (['Verilog', 'Digital Electronics', 'FPGA', 'MATLAB', 'C'],
+                    'Digital design enthusiast; implemented a RISC-V core on an FPGA.'),
+    'Ananya Gupta': (['Analog Circuits', 'Embedded C', 'Microcontrollers', 'PCB Design', 'MATLAB', 'Python'],
+                     'Designed a low-noise amplifier and an STM32-based data logger with a custom PCB.'),
+    'Rohan Mehta': (['SolidWorks', 'AutoCAD', 'ANSYS', 'Manufacturing'],
+                    'Designed a go-kart chassis in SolidWorks and validated it with ANSYS simulations.'),
+    'Ishita Kapoor': (['Power Systems', 'MATLAB', 'Control Systems', 'PLC'],
+                      'Modelled a grid-tied solar inverter in Simulink; PLC automation internship.'),
+    'Neha Joshi': (['Java', 'Python', 'SQL', 'React', 'OOP'], 'Full-stack projects with React and Java backends.'),
+    'Arjun Nair': (['AutoCAD', 'SolidWorks', 'Thermodynamics'], 'Heat-exchanger design project; CAD modelling.'),
+    'Sara Khan': (['AutoCAD', 'STAAD Pro', 'Surveying', 'Revit'], 'Structural design of a G+3 building in STAAD Pro.'),
+}
 
 PIPELINE = ['Applied', 'Shortlisted', 'Interview', 'Offered']
 
