@@ -5,3 +5,6 @@
 *.webm binary
 *.mp4 binary
 *.gif binary
+
+# Shell scripts run on Linux servers
+*.sh text eol=lf

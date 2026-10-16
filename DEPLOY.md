@@ -7,6 +7,21 @@ built React app plus a reverse proxy for `/api`, including WebSockets).
 stack on every push and smoke-tests it through nginx (`.github/workflows/ci.yml`,
 job `docker`).
 
+## Quickest path: one command on a fresh server
+
+On an Ubuntu 22.04/24.04 server with 2 GB RAM (for example a DigitalOcean droplet),
+SSH in and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/svm-codes-fs/Placement-management-system/main/scripts/deploy_vm.sh | sudo bash
+```
+
+It installs Docker and Caddy, generates secrets, starts the production stack and
+serves it over HTTPS at `https://<your-ip-with-dashes>.sslip.io` (no domain needed).
+It prints the URL and the demo password at the end. To use your own domain, point
+its A record at the server and pass it: `... | sudo bash -s -- placeiq.example.com`.
+Re-run the same command to deploy new code. The manual steps below do the same thing.
+
 ## Option A: one virtual machine (recommended)
 
 Any Linux VM with 2 GB RAM and Docker works (a $5–6/month droplet, Lightsail
