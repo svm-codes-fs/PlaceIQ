@@ -93,7 +93,6 @@ jobs:
           docker compose -f docker-compose.prod.yml logs --no-color --tail 80 api worker web > container-logs.txt
           cat container-logs.txt
           # Also as an annotation, readable on the run page without signing in
-          python3 -c "t=open('container-logs.txt').read()[-6000:]; print('::error title=Container logs::' + t.replace('%','%25').replace('','').replace('
-','%0A'))"
+          python3 scripts/annotate_logs.py container-logs.txt
       - name: Development stack builds
         run: docker compose build api frontend
