@@ -154,3 +154,36 @@ def embed_company(company_id):
     if company:
         with college_context(company.college_id):
             refresh_company(company)
+
+
+@shared_task
+def generate_interview(session_id, count):
+    from app.models import InterviewSession
+    from app.services.interviews import generate, session_json
+
+    session = db.session.get(InterviewSession, session_id)
+    if not session:
+        return None
+    with college_context(session.college_id):
+        try:
+            generate(session, count)
+        except Exception as exc:
+            db.session.rollback()
+            session.status, session.error = 'failed', f'Could not prepare questions: {exc}'
+            db.session.commit()
+        push_to_user(session.student.user_id, 'interview_updated', session_json(session, with_questions=False))
+        return session.status
+
+
+@shared_task
+def score_interview(session_id):
+    from app.models import InterviewSession
+    from app.services.interviews import score, session_json
+
+    session = db.session.get(InterviewSession, session_id)
+    if not session:
+        return None
+    with college_context(session.college_id):
+        score(session)
+        push_to_user(session.student.user_id, 'interview_updated', session_json(session, with_questions=False))
+        return session.overall_score

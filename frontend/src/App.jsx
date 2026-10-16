@@ -9,6 +9,8 @@ import { StudentApplications } from "./pages/student/StudentApplications";
 import { StudentProfile } from "./pages/student/StudentProfile";
 import { StudentResume } from "./pages/student/StudentResume";
 import { StudentMatches } from "./pages/student/StudentMatches";
+import { StudentInterviews } from "./pages/student/StudentInterviews";
+import { InterviewSession } from "./pages/student/InterviewSession";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminStudents } from "./pages/admin/AdminStudents";
 import { AdminCompanies } from "./pages/admin/AdminCompanies";
@@ -66,6 +68,8 @@ function App() {
             <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/resume" element={<StudentResume />} />
             <Route path="/student/matches" element={<StudentMatches />} />
+            <Route path="/student/interviews" element={<StudentInterviews />} />
+            <Route path="/student/interviews/:id" element={<InterviewSession />} />
             <Route path="/student/*" element={<Navigate to="/student" />} />
           </Route>
 
