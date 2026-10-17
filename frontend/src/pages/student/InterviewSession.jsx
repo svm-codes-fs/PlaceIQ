@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Cpu, Sparkles, Timer } from "lucide-react";
+import { ArrowLeft, ArrowRight, Cpu, Loader2, Sparkles, Timer } from "lucide-react";
 import { api } from "@/utils/api";
 import { useNotifications } from "@/utils/notifications";
-import { Alert, GhostButton, PrimaryButton, errorMessage } from "@/components/ui/Form";
+import { Alert, GhostButton, PrimaryButton, Textarea, errorMessage } from "@/components/ui/Form";
+import { Card, LoadingRows, Page, PageHeader } from "@/components/ui/Page";
 
 const SUGGESTED_SECONDS = 180;
 
@@ -75,83 +76,81 @@ export function InterviewSession() {
     setSubmitting(false);
   };
 
-  if (!session) return <p className="py-24 text-center text-sm text-gray-600 animate-pulse">Loading...</p>;
+  if (!session) return <Page className="max-w-4xl"><LoadingRows rows={4} className="p-0" /></Page>;
 
   const header = (
-    <header className="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <Link to="/student/interviews" className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-white">
-          <ArrowLeft className="h-3 w-3" /> All interviews
-        </Link>
-        <h1 className="text-3xl font-extrabold tracking-tighter text-white capitalize">
-          {session.round_type} round{session.company ? ` · ${session.company.name}` : ""}
-        </h1>
-        <p className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-          {session.generator === "claude"
-            ? <><Sparkles className="h-3.5 w-3.5 text-primaryLight" /> Questions written by Claude for your profile</>
-            : session.generator && <><Cpu className="h-3.5 w-3.5" /> Questions from the built-in bank</>}
-        </p>
-      </div>
-    </header>
+    <div>
+      <Link to="/student/interviews" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+        <ArrowLeft className="h-4 w-4" /> All interviews
+      </Link>
+      <PageHeader
+        title={<span className="capitalize">{session.round_type} round{session.company ? ` · ${session.company.name}` : ""}</span>}
+        description={session.generator === "claude"
+          ? <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-brand" /> Questions written by Claude for your profile</span>
+          : session.generator && <span className="inline-flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5" /> Questions from the built-in bank</span>}
+      />
+    </div>
   );
 
   if (session.status === "generating" || session.status === "scoring") {
     return (
-      <div className="max-w-4xl mx-auto pt-6 space-y-6">
+      <Page className="max-w-4xl">
         {header}
-        <div className="glass-panel rounded-2xl border border-white/5 py-20 text-center">
-          <p className="text-sm text-primaryLight animate-pulse">
-            {session.status === "generating" ? "Writing your questions..." : "Scoring your answers..."}
-          </p>
-        </div>
-      </div>
+        <Card>
+          <div className="flex flex-col items-center py-12 text-center" role="status">
+            <Loader2 className="mb-3 h-6 w-6 animate-spin text-brand" />
+            <p className="text-sm font-medium text-ink">{session.status === "generating" ? "Writing your questions…" : "Scoring your answers…"}</p>
+            <p className="mt-1 text-sm text-muted">This page updates on its own.</p>
+          </div>
+        </Card>
+      </Page>
     );
   }
 
   if (session.status === "failed") {
     return (
-      <div className="max-w-4xl mx-auto pt-6 space-y-6">{header}<Alert>{session.error || "Something went wrong."}</Alert></div>
+      <Page className="max-w-4xl">{header}<Alert>{session.error || "Something went wrong."}</Alert></Page>
     );
   }
 
   if (session.status === "completed") {
     return (
-      <div className="max-w-4xl mx-auto pt-6 pb-16 space-y-6 animate-in fade-in duration-500">
+      <Page className="max-w-4xl">
         {header}
-        <section className="glass-panel rounded-2xl border border-primary/30 p-6">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Overall</p>
-          <p className="mt-1 text-5xl font-light text-white">{session.overall_score}<span className="text-xl text-gray-500"> / 10</span></p>
-          <p className="mt-3 text-sm leading-relaxed text-gray-300">{session.overall_feedback}</p>
-          <p className="mt-3 flex items-center gap-2 text-[11px] text-gray-600">
-            {session.scorer === "claude" ? <><Sparkles className="h-3 w-3" /> Scored by Claude</> : <><Cpu className="h-3 w-3" /> Scored with the offline rubric</>}
+        <section className="rounded-lg border border-line bg-white p-6 shadow-card">
+          <p className="text-sm font-medium text-muted">Overall</p>
+          <p className="num mt-1 text-4xl font-semibold tracking-tight text-ink">{session.overall_score}<span className="text-lg font-normal text-muted"> / 10</span></p>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink">{session.overall_feedback}</p>
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
+            {session.scorer === "claude" ? <><Sparkles className="h-3.5 w-3.5" /> Scored by Claude</> : <><Cpu className="h-3.5 w-3.5" /> Scored with the offline rubric</>}
           </p>
-          {session.error && <p className="mt-2 text-[11px] text-warning">{session.error}</p>}
+          {session.error && <p className="mt-2 text-xs text-warning">{session.error}</p>}
         </section>
         <ol className="space-y-4">
           {session.questions.map((q, i) => (
-            <li key={q.id} className="glass-panel rounded-2xl border border-white/5 p-5 space-y-3">
+            <li key={q.id} className="space-y-3 rounded-lg border border-line bg-white p-5 shadow-card">
               <div className="flex items-start justify-between gap-4">
-                <p className="text-sm font-bold text-white">{i + 1}. {q.question}</p>
-                <span className="shrink-0 text-lg font-bold text-white">{q.score ?? 0}<span className="text-xs text-gray-500">/10</span></span>
+                <p className="text-sm font-semibold text-ink">{i + 1}. {q.question}</p>
+                <span className="num shrink-0 text-lg font-semibold text-ink">{q.score ?? 0}<span className="text-xs font-normal text-muted">/10</span></span>
               </div>
-              <div className="flex flex-wrap gap-4 text-[11px] text-gray-500">
-                <span>Correctness <b className="text-white">{q.correctness}</b></span>
-                <span>Clarity <b className="text-white">{q.clarity}</b></span>
-                <span>Depth <b className="text-white">{q.depth}</b></span>
+              <div className="num flex flex-wrap gap-4 text-xs text-muted">
+                <span>Correctness <span className="font-medium text-ink">{q.correctness}</span></span>
+                <span>Clarity <span className="font-medium text-ink">{q.clarity}</span></span>
+                <span>Depth <span className="font-medium text-ink">{q.depth}</span></span>
                 {q.time_taken_s ? <span>Time {Math.round(q.time_taken_s / 60 * 10) / 10} min</span> : null}
               </div>
-              <blockquote className="rounded-xl bg-white/[0.03] px-4 py-3 text-xs text-gray-400 whitespace-pre-wrap">{q.answer || "(no answer)"}</blockquote>
-              <p className="text-sm text-gray-300">{q.feedback}</p>
+              <blockquote className="whitespace-pre-wrap rounded-md border-l-2 border-line bg-slate-50 px-4 py-3 text-sm text-muted">{q.answer || "(no answer)"}</blockquote>
+              <p className="text-sm text-ink">{q.feedback}</p>
               {q.ideal_points?.length > 0 && (
                 <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">A strong answer covers</p>
-                  <ul className="list-disc space-y-0.5 pl-5 text-xs text-gray-400">{q.ideal_points.map((p) => <li key={p}>{p}</li>)}</ul>
+                  <p className="mb-1 text-xs font-medium text-muted">A strong answer covers</p>
+                  <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted">{q.ideal_points.map((p) => <li key={p}>{p}</li>)}</ul>
                 </div>
               )}
             </li>
           ))}
         </ol>
-      </div>
+      </Page>
     );
   }
 
@@ -159,43 +158,42 @@ export function InterviewSession() {
   const total = session.questions.length;
   const over = seconds > SUGGESTED_SECONDS;
   return (
-    <div className="max-w-4xl mx-auto pt-6 pb-16 space-y-6">
+    <Page className="max-w-4xl">
       {header}
       {error && <Alert items={error.items}>{error.text}</Alert>}
       <div className="flex gap-1.5" aria-label={`Question ${index + 1} of ${total}`}>
         {session.questions.map((q, i) => (
-          <button key={q.id} onClick={() => go(i)} aria-label={`Go to question ${i + 1}`}
-            className={`h-1.5 flex-1 rounded-full ${i === index ? "bg-primary" : (answers[q.id] || "").trim() ? "bg-primary/40" : "bg-white/10"}`} />
+          <button key={q.id} onClick={() => go(i)} aria-label={`Go to question ${i + 1}`} aria-current={i === index ? "step" : undefined}
+            className={`h-1.5 flex-1 rounded-full ${i === index ? "bg-brand" : (answers[q.id] || "").trim() ? "bg-blue-300" : "bg-slate-200"}`} />
         ))}
       </div>
-      <section className="glass-panel rounded-2xl border border-white/5 p-6 space-y-4">
+      <section className="space-y-4 rounded-lg border border-line bg-white p-6 shadow-card">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Question {index + 1} of {total}{question.focus ? ` · ${question.focus}` : ""}</p>
-            <h2 className="mt-2 text-lg font-bold leading-snug text-white">{question.question}</h2>
+            <p className="text-xs font-medium text-muted">Question {index + 1} of {total}{question.focus ? ` · ${question.focus}` : ""}</p>
+            <h2 className="mt-2 text-base font-semibold leading-snug text-ink sm:text-lg">{question.question}</h2>
           </div>
-          <span className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold tabular-nums ${over ? "bg-warning/10 text-warning" : "bg-white/5 text-gray-400"}`}
+          <span className={`num flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${over ? "bg-warning-soft text-warning" : "bg-slate-100 text-muted"}`}
             title={`Aim for about ${SUGGESTED_SECONDS / 60} minutes`}>
             <Timer className="h-3.5 w-3.5" /> {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
           </span>
         </div>
-        <textarea
+        <Textarea
           rows={10}
           value={answers[question.id] || ""}
           onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
           aria-label="Your answer"
           placeholder="Answer as you would in the interview. Structure helps: situation or concept, your approach, the result, trade-offs."
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-white placeholder:text-gray-600 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <div className="flex items-center justify-between gap-3">
-          <GhostButton onClick={() => go(index - 1)} disabled={index === 0}><ArrowLeft className="h-3.5 w-3.5" /> Previous</GhostButton>
+          <GhostButton onClick={() => go(index - 1)} disabled={index === 0}><ArrowLeft className="h-4 w-4" /> Previous</GhostButton>
           {index < total - 1 ? (
-            <PrimaryButton onClick={() => go(index + 1)}>Next <ArrowRight className="h-3.5 w-3.5" /></PrimaryButton>
+            <PrimaryButton onClick={() => go(index + 1)}>Next <ArrowRight className="h-4 w-4" /></PrimaryButton>
           ) : (
-            <PrimaryButton onClick={submitAll} disabled={submitting}>{submitting ? "Submitting..." : "Submit for scoring"}</PrimaryButton>
+            <PrimaryButton onClick={submitAll} disabled={submitting}>{submitting ? "Submitting…" : "Submit for scoring"}</PrimaryButton>
           )}
         </div>
       </section>
-    </div>
+    </Page>
   );
 }
