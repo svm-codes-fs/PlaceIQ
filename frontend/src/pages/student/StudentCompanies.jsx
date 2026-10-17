@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Search, ArrowRight, Briefcase, AlertCircle } from "lucide-react";
+import { Briefcase, AlertCircle } from "lucide-react";
 import { api } from "@/utils/api";
-import { Alert, errorMessage } from "@/components/ui/Form";
+import { Alert, PrimaryButton, errorMessage } from "@/components/ui/Form";
+import { Avatar, Card, EmptyState, LoadingRows, Page, PageHeader, SearchInput, Tabs } from "@/components/ui/Page";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const FILTERS = [
@@ -44,126 +44,81 @@ export function StudentCompanies() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase mb-1">Placement</p>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tighter leading-tight">
-            OPPORTUNITIES.
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {companies.filter((c) => c.is_eligible).length} of {companies.length} drives match your profile.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl bg-white/5 p-1">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all
-                  ${filter === f.key ? "bg-white/10 text-white" : "text-gray-500 hover:text-white"}`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search companies..."
-              aria-label="Search companies"
-              className="pl-9 pr-4 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white focus:bg-white/10 focus:border-white/20 focus:outline-none transition-all w-56"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </header>
+    <Page>
+      <PageHeader
+        title="Opportunities"
+        description={`${companies.filter((c) => c.is_eligible).length} of ${companies.length} drives match your profile.`}
+      />
 
       {message && <Alert type={message.type} items={message.items}>{message.text}</Alert>}
 
-      <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden">
+      <Card flush>
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <Tabs value={filter} onChange={setFilter} options={FILTERS} />
+          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search company or role" label="Search companies" />
+        </div>
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-gray-600 animate-pulse">Loading opportunities...</div>
+          <LoadingRows rows={5} />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-14 text-center px-6">
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">
-              <Briefcase className="w-5 h-5 text-gray-600" />
-            </div>
-            <p className="text-sm font-bold text-gray-400 mb-1">No Opportunities Found</p>
-            <p className="text-xs text-gray-600">Try a different filter, or check back when new drives are posted.</p>
-          </div>
+          <EmptyState icon={Briefcase} title="No drives found" description="Try a different filter, or check back when new drives are posted." />
         ) : (
-          <div className="divide-y divide-white/5">
-            {filtered.map((company, i) => (
-              <motion.div
-                key={company.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="group px-5 py-4 hover:bg-white/[0.02] transition-colors"
-              >
-                <div className="flex items-center gap-5">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 text-white flex items-center justify-center font-bold text-sm group-hover:bg-primary/20 transition-all border border-white/5 shrink-0">
-                    {company.name.charAt(0)}
+          <ul className="divide-y divide-line">
+            {filtered.map((company) => (
+              <li key={company.id} className="px-5 py-4">
+                <div className="flex items-center gap-4">
+                  <Avatar name={company.name} className="rounded-md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-ink">{company.name}</p>
+                    <p className="truncate text-xs text-muted">{company.role_offered}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-white">{company.name}</p>
-                    <p className="text-xs text-primaryLight font-medium">{company.role_offered}</p>
-                  </div>
-                  <div className="hidden md:flex items-center gap-8 shrink-0">
-                    <Stat label="Package" value={<>₹{company.package_lpa} <span className="text-[10px] text-gray-500">LPA</span></>} />
-                    <Stat label="Min CGPA" value={`${company.min_cgpa}+`} />
-                    <Stat label="Backlogs" value={`≤${company.max_backlogs}`} />
-                    <Stat label="Drive" value={company.visit_date ? new Date(company.visit_date).toLocaleDateString() : "TBA"} />
-                  </div>
-                  <div className="shrink-0 w-28 flex justify-end">
+                  <dl className="hidden shrink-0 gap-8 text-right md:flex">
+                    <Meta label="Package" value={`₹${company.package_lpa} LPA`} />
+                    <Meta label="Min CGPA" value={company.min_cgpa} />
+                    <Meta label="Max backlogs" value={company.max_backlogs} />
+                    <Meta label="Drive date" value={company.visit_date ? new Date(company.visit_date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "TBA"} />
+                  </dl>
+                  <div className="flex w-28 shrink-0 justify-end">
                     {company.application_status ? (
                       <StatusBadge status={company.application_status} />
                     ) : !company.is_eligible ? (
-                      <span className="px-3 py-2 text-[10px] uppercase font-bold tracking-widest text-gray-600 border border-white/5 rounded-xl">
-                        Ineligible
-                      </span>
+                      <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-muted">Ineligible</span>
                     ) : company.status !== "Upcoming" ? (
                       <StatusBadge status={company.status} />
                     ) : (
-                      <button
-                        onClick={() => handleApply(company)}
-                        disabled={applyingId === company.id}
-                        className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#7C3AED] to-[#2563EB] text-white font-bold text-xs tracking-wide rounded-xl hover:shadow-[0_0_20px_-5px_rgba(124,58,237,0.5)] hover:scale-105 transition-all duration-300 disabled:opacity-50"
-                      >
-                        {applyingId === company.id ? "Applying..." : "Apply"} <ArrowRight className="w-3 h-3" />
-                      </button>
+                      <PrimaryButton onClick={() => handleApply(company)} disabled={applyingId === company.id}>
+                        {applyingId === company.id ? "Applying…" : "Apply"}
+                      </PrimaryButton>
                     )}
                   </div>
                 </div>
+                <p className="num mt-2 pl-12 text-xs text-muted md:hidden">
+                  ₹{company.package_lpa} LPA · Min CGPA {company.min_cgpa} · Max backlogs {company.max_backlogs}
+                </p>
 
-                {/* Why can't I apply? */}
+                {/* Why the student cannot apply */}
                 {!company.is_eligible && !company.application_status && (
-                  <ul className="mt-3 space-y-1 pl-[3.75rem]">
+                  <ul className="mt-3 space-y-1 rounded-md bg-slate-50 px-3 py-2 sm:ml-12">
                     {company.ineligibility_reasons.map((reason) => (
-                      <li key={reason} className="flex items-center gap-2 text-[11px] text-gray-500">
-                        <AlertCircle className="w-3 h-3 text-danger/70 shrink-0" /> {reason}
+                      <li key={reason} className="flex items-start gap-2 text-xs text-muted">
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger" /> {reason}
                       </li>
                     ))}
                   </ul>
                 )}
-              </motion.div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-      </div>
-    </div>
+      </Card>
+    </Page>
   );
 }
 
-function Stat({ label, value }) {
+function Meta({ label, value }) {
   return (
-    <div className="text-right">
-      <p className="text-[10px] uppercase font-bold text-gray-600 tracking-widest">{label}</p>
-      <p className="text-sm font-semibold text-white">{value}</p>
+    <div>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="num text-sm font-medium text-ink">{value}</dd>
     </div>
   );
 }

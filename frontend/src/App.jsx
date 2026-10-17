@@ -49,7 +49,7 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
+    return <div className="flex h-screen w-screen items-center justify-center bg-canvas text-sm text-muted">Loading…</div>;
   }
 
   const home = user ? HOME[user.role] : "/login";

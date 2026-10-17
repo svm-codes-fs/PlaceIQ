@@ -7,17 +7,18 @@ export function Pagination({ page, perPage, total, onPage }) {
   const pages = Math.ceil(total / perPage);
   const from = (page - 1) * perPage + 1;
   const to = Math.min(total, page * perPage);
-  const button = "rounded-lg border border-white/10 p-1.5 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent";
+  const button = "inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-muted shadow-card hover:bg-slate-50 hover:text-ink disabled:opacity-40 disabled:hover:bg-white";
   return (
-    <nav className="flex items-center justify-between border-t border-white/5 px-5 py-3" aria-label="Pagination">
-      <p className="text-xs text-gray-500">
-        Showing <b className="text-gray-300">{from.toLocaleString()}–{to.toLocaleString()}</b> of {total.toLocaleString()}
+    <nav className="flex items-center justify-between border-t border-line px-4 py-3" aria-label="Pagination">
+      <p className="text-sm text-muted">
+        Showing <span className="num font-medium text-ink">{from.toLocaleString()}–{to.toLocaleString()}</span> of{" "}
+        <span className="num font-medium text-ink">{total.toLocaleString()}</span>
       </p>
       <div className="flex items-center gap-2">
         <button className={button} onClick={() => onPage(page - 1)} disabled={page <= 1} aria-label="Previous page">
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="text-xs tabular-nums text-gray-500">{page} / {pages}</span>
+        <span className="num text-sm text-muted">{page} / {pages}</span>
         <button className={button} onClick={() => onPage(page + 1)} disabled={page >= pages} aria-label="Next page">
           <ChevronRight className="h-4 w-4" />
         </button>

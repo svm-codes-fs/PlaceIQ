@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Search, FileText, History } from "lucide-react";
+import { FileText, History } from "lucide-react";
 import { api } from "@/utils/api";
-import { Alert } from "@/components/ui/Form";
+import { Alert, IconButton, Select } from "@/components/ui/Form";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
 import { Timeline } from "@/components/ui/Timeline";
 import { Pagination, useDebounced } from "@/components/ui/Pagination";
+import { Avatar, Card, EmptyState, LoadingRows, Page, PageHeader, SearchInput } from "@/components/ui/Page";
+import { cn } from "@/utils/cn";
 
 const PER_PAGE = 25;
+const STATUS_FILTERS = ["Applied", "Shortlisted", "Interview", "Offered", "Accepted", "Declined", "Rejected", "Expired"];
 
 // Button label for each move the state machine allows
 const ACTION_LABELS = {
@@ -23,17 +25,18 @@ export function AdminApplications() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
   const [updating, setUpdating] = useState(null);
   const [error, setError] = useState(null);
   const [historyFor, setHistoryFor] = useState(null);
 
   const query = useDebounced(search);
   const fetchApplications = useCallback(() =>
-    api.get(`/admin/applications?page=${page}&per_page=${PER_PAGE}&q=${encodeURIComponent(query)}`)
-      .then(setData).finally(() => setLoading(false)), [page, query]);
+    api.get(`/admin/applications?page=${page}&per_page=${PER_PAGE}&q=${encodeURIComponent(query)}${status ? `&status=${status}` : ""}`)
+      .then(setData).finally(() => setLoading(false)), [page, query, status]);
 
   useEffect(() => { fetchApplications(); }, [fetchApplications]);
-  useEffect(() => { setPage(1); }, [query]);
+  useEffect(() => { setPage(1); }, [query, status]);
 
   const handleStatusChange = async (app, newStatus) => {
     if (newStatus === "Rejected" && !window.confirm(`Reject ${app.student_name} for ${app.company_name}? This can't be undone.`)) return;
@@ -53,123 +56,99 @@ export function AdminApplications() {
   const totalAll = Object.values(data.status_counts).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
-
-      {/* Compact header */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase mb-1">Placement</p>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tighter leading-tight">
-            APPLICATION <span className="text-gradient">PIPELINE.</span>
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {totalAll.toLocaleString()} total · {(data.status_counts.Accepted || 0).toLocaleString()} placed
-          </p>
-        </div>
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search student or company..."
-            className="pl-9 pr-4 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white focus:bg-white/10 focus:border-white/20 focus:outline-none transition-all w-64"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </header>
+    <Page>
+      <PageHeader
+        title="Applications"
+        description={`${totalAll.toLocaleString()} applications · ${(data.status_counts.Accepted || 0).toLocaleString()} offers accepted`}
+      />
 
       {error && <Alert>{error}</Alert>}
 
-      {/* Table */}
-      <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden">
+      <Card flush>
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center">
+          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search student or company" label="Search applications" inputClassName="sm:w-80" />
+          <Select
+            aria-label="Filter by status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="sm:w-52"
+            options={[{ value: "", label: `All statuses (${totalAll})` },
+              ...STATUS_FILTERS.map((s) => ({ value: s, label: `${s} (${data.status_counts[s] || 0})` }))]}
+          />
+          <p className="num text-sm text-muted sm:ml-auto">{data.total.toLocaleString()} {data.total === 1 ? "result" : "results"}</p>
+        </div>
+
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-gray-600 animate-pulse">Loading pipeline...</div>
+          <LoadingRows rows={6} />
         ) : filteredApps.length === 0 ? (
-          <div className="flex flex-col items-center py-14 text-center px-6">
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">
-              <FileText className="w-5 h-5 text-gray-600" />
-            </div>
-            <p className="text-sm font-bold text-gray-400 mb-1">No Applications Found</p>
-            <p className="text-xs text-gray-600">Applications will appear here as students apply to drives.</p>
-          </div>
+          <EmptyState icon={FileText} title="No applications found"
+            description={search || status ? "Try a different search or status." : "Applications appear here as students apply to drives."} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="table-base">
               <thead>
-                <tr className="border-b border-white/5">
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Student</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Company & Role</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Applied</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Status</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Next step</th>
-                </tr>
+                <tr><th>Student</th><th>Company &amp; role</th><th>Applied</th><th>Status</th><th>Next step</th><th><span className="sr-only">History</span></th></tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredApps.map((app, i) => (
-                  <motion.tr
-                    key={app.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.02 }}
-                    className={`group hover:bg-white/[0.02] transition-colors ${updating === app.id ? 'opacity-40 pointer-events-none' : ''}`}
-                  >
-                    <td className="px-5 py-3.5">
+              <tbody>
+                {filteredApps.map((app) => (
+                  <tr key={app.id} className={cn(updating === app.id && "pointer-events-none opacity-50")}>
+                    <td className="max-w-[16rem]">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-white/5 text-white flex items-center justify-center font-bold text-xs border border-white/5 shrink-0">
-                          {app.student_name.charAt(0)}
+                        <Avatar name={app.student_name} />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium" title={app.student_name}>{app.student_name}</p>
+                          <p className="num text-xs text-muted">{app.student_roll}</p>
                         </div>
-                        <div>
-                          <p className="font-semibold text-sm text-white">{app.student_name}</p>
-                          <p className="text-[10px] text-gray-600">{app.student_roll}</p>
-                        </div>
-                        <button onClick={() => setHistoryFor(app)} aria-label={`History of ${app.student_name}'s application to ${app.company_name}`}
-                          title="History" className="ml-auto p-1.5 rounded-lg text-gray-600 hover:text-white hover:bg-white/10">
-                          <History className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <p className="text-sm font-semibold text-white">{app.company_name}</p>
-                      <p className="text-[10px] text-primaryLight font-medium">{app.role_offered}</p>
+                    <td className="max-w-[16rem]">
+                      <p className="truncate font-medium" title={app.company_name}>{app.company_name}</p>
+                      <p className="truncate text-xs text-muted" title={app.role_offered}>{app.role_offered}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">
-                      {new Date(app.applied_date).toLocaleDateString()}
+                    <td className="num whitespace-nowrap text-muted">
+                      {new Date(app.applied_date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td>
                       <StatusBadge status={app.status} />
-                      {app.status === 'Offered' && (
-                        <p className="mt-1 text-[10px] text-gray-600">Waiting for the student to respond</p>
-                      )}
+                      {app.status === "Offered" && <p className="mt-1 text-xs text-muted">Awaiting student response</p>}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td>
                       <div className="flex flex-wrap gap-1.5">
                         {app.allowed_transitions.map((s) => (
                           <button
                             key={s}
                             onClick={() => handleStatusChange(app, s)}
-                            className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all whitespace-nowrap border
-                              ${s === 'Rejected'
-                                ? 'border-danger/30 text-danger hover:bg-danger/10'
-                                : 'border-primary/40 bg-primary/10 text-white hover:bg-primary/30'}`}
+                            className={cn(
+                              "whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-medium shadow-card transition-colors",
+                              s === "Rejected"
+                                ? "border-red-200 bg-white text-danger hover:bg-danger-soft"
+                                : "border-line bg-white text-ink hover:border-brand hover:text-brand"
+                            )}
                           >
                             {ACTION_LABELS[s] || s}
                           </button>
                         ))}
-                        {app.allowed_transitions.length === 0 && <span className="text-[10px] text-gray-700">—</span>}
+                        {app.allowed_transitions.length === 0 && <span className="text-xs text-slate-400">No further action</span>}
                       </div>
                     </td>
-                  </motion.tr>
+                    <td className="text-right">
+                      <IconButton onClick={() => setHistoryFor(app)} aria-label={`History of ${app.student_name}'s application to ${app.company_name}`} title="View history">
+                        <History className="h-4 w-4" />
+                      </IconButton>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
         <Pagination page={page} perPage={PER_PAGE} total={data.total} onPage={setPage} />
-      </div>
+      </Card>
+
       <Modal open={!!historyFor} onClose={() => setHistoryFor(null)} title="Application history"
         subtitle={historyFor && `${historyFor.student_name} · ${historyFor.company_name}`}>
         {historyFor && <Timeline url={`/admin/applications/${historyFor.id}/timeline`} />}
       </Modal>
-    </div>
+    </Page>
   );
 }
