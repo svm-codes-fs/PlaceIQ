@@ -58,7 +58,7 @@ export function NotificationsProvider({ user, children }) {
   return (
     <NotificationsContext.Provider value={{ items, unread, markAllRead, subscribe, connected: !!socket?.connected }}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-24 z-[60] flex w-80 flex-col gap-2" aria-live="polite">
+      <div className="pointer-events-none fixed right-4 top-16 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2" aria-live="polite">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
@@ -66,16 +66,16 @@ export function NotificationsProvider({ user, children }) {
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
-              className="pointer-events-auto rounded-2xl border border-primary/30 bg-[#14141f]/95 p-4 shadow-2xl backdrop-blur"
+              className="pointer-events-auto rounded-lg border border-line bg-white p-4 shadow-pop"
             >
               <div className="flex items-start gap-3">
-                <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primaryLight" />
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand"><Bell className="h-3.5 w-3.5" /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">{t.title}</p>
-                  {t.body && <p className="mt-0.5 text-xs text-gray-400">{t.body}</p>}
+                  <p className="text-sm font-medium text-ink">{t.title}</p>
+                  {t.body && <p className="mt-0.5 text-sm text-muted">{t.body}</p>}
                 </div>
                 <button aria-label="Dismiss" onClick={() => setToasts((x) => x.filter((y) => y.toastId !== t.toastId))}
-                  className="text-gray-600 hover:text-white">
+                  className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-ink">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>

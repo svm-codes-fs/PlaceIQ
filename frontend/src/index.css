@@ -3,40 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-textPrimary antialiased selection:bg-primary/30 selection:text-white min-h-screen font-sans;
+    @apply bg-canvas text-ink antialiased font-sans text-sm;
+    font-feature-settings: "cv11", "ss01";
   }
-  
-  /* Custom scrollbar for dark theme */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  h1, h2, h3 {
+    @apply text-ink;
   }
-  ::-webkit-scrollbar-track {
-    background: transparent;
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand/40 ring-offset-1;
   }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+  ::selection {
+    @apply bg-brand/15;
   }
 }
 
-.glass-panel {
-  @apply backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.5)];
-  background-color: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.05);
-}
-
-.text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-[#a78bfa] via-[#60a5fa] to-[#38bdf8];
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
+@layer components {
+  /* Tables: sentence-case headers, tabular numbers, quiet row dividers */
+  .table-base {
+    @apply w-full text-left text-sm;
+  }
+  .table-base thead th {
+    @apply whitespace-nowrap border-b border-line bg-slate-50/70 px-4 py-2.5 text-xs font-medium text-muted;
+  }
+  .table-base tbody td {
+    @apply border-b border-line px-4 py-3 align-middle text-ink;
+  }
+  .table-base tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table-base tbody tr {
+    @apply transition-colors hover:bg-slate-50/60;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { cn } from "@/utils/cn";
 
 // Chip-style editor for a list of skills
 export function SkillInput({ value, onChange, placeholder = "Add a skill and press Enter", label = "Skills" }) {
@@ -15,13 +16,13 @@ export function SkillInput({ value, onChange, placeholder = "Add a skill and pre
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+    <div className="rounded-md border border-line bg-white p-1.5 shadow-card focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
       <ul className="flex flex-wrap gap-1.5" aria-label={label}>
         {value.map((skill) => (
-          <li key={skill} className="flex items-center gap-1 rounded-lg bg-primary/20 py-1 pl-2.5 pr-1 text-xs font-semibold text-white">
+          <li key={skill} className="flex items-center gap-1 rounded bg-slate-100 py-1 pl-2 pr-1 text-xs font-medium text-ink">
             {skill}
             <button type="button" aria-label={`Remove ${skill}`} onClick={() => onChange(value.filter((s) => s !== skill))}
-              className="rounded p-0.5 text-white/60 hover:bg-white/10 hover:text-white">
+              className="rounded p-0.5 text-muted hover:bg-slate-200 hover:text-ink">
               <X className="h-3 w-3" />
             </button>
           </li>
@@ -37,7 +38,7 @@ export function SkillInput({ value, onChange, placeholder = "Add a skill and pre
             }}
             onBlur={() => draft.trim() && add(draft)}
             placeholder={value.length ? "" : placeholder}
-            className="w-full bg-transparent px-1.5 py-1 text-sm text-white placeholder:text-gray-600 focus:outline-none"
+            className="w-full bg-transparent px-1.5 py-1 text-sm text-ink placeholder:text-slate-400 focus:outline-none"
           />
         </li>
       </ul>
@@ -47,28 +48,29 @@ export function SkillInput({ value, onChange, placeholder = "Add a skill and pre
 
 export function SkillChips({ skills, tone = "default" }) {
   const styles = {
-    default: "bg-white/5 text-gray-300 border-white/10",
-    matched: "bg-success/10 text-success border-success/20",
-    missing: "bg-warning/10 text-warning border-warning/20",
+    default: "bg-slate-50 text-slate-700 ring-slate-200",
+    matched: "bg-green-50 text-green-700 ring-green-200",
+    missing: "bg-amber-50 text-amber-800 ring-amber-200",
   };
   if (!skills?.length) return null;
   return (
     <ul className="flex flex-wrap gap-1.5">
       {skills.map((s) => (
-        <li key={s} className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${styles[tone]}`}>{s}</li>
+        <li key={s} className={cn("rounded px-2 py-0.5 text-xs font-medium ring-1 ring-inset", styles[tone])}>{s}</li>
       ))}
     </ul>
   );
 }
 
+// Match score out of 100 with a short bar
 export function ScoreBar({ score }) {
-  const color = score >= 70 ? "bg-success" : score >= 45 ? "bg-primary" : "bg-gray-500";
+  const color = score >= 70 ? "bg-green-600" : score >= 45 ? "bg-brand" : "bg-slate-400";
   return (
-    <div className="flex items-center gap-2" aria-label={`Match score ${score} out of 100`}>
-      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-white/10">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.max(3, score)}%` }} />
+    <div className="flex items-center gap-2.5" aria-label={`Match score ${score} out of 100`}>
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
+        <div className={cn("h-full rounded-full", color)} style={{ width: `${Math.max(3, score)}%` }} />
       </div>
-      <span className="w-8 text-right text-sm font-bold tabular-nums text-white">{score}</span>
+      <span className="num w-7 text-right text-sm font-semibold text-ink">{score}</span>
     </div>
   );
 }

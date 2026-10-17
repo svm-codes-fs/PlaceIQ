@@ -42,38 +42,38 @@ export function ImportStudents({ open, onClose, onImported }) {
         {error && <Alert>{error}</Alert>}
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/15 px-4 py-4 text-sm text-gray-400 hover:border-primary/50">
-            <FileUp className="h-4 w-4 text-primaryLight" />
-            <span className="truncate">{file ? file.name : "Choose a .csv file"}</span>
+          <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-muted transition-colors hover:border-brand hover:bg-brand-soft/40">
+            <FileUp className="h-4 w-4 text-brand" />
+            <span className="truncate">{file ? <span className="font-medium text-ink">{file.name}</span> : "Choose a .csv file"}</span>
             <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => { setFile(e.target.files[0]); setJob(null); }} />
           </label>
-          <a href="/api/admin/students/import-template" className="inline-flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white">
-            <Download className="h-3.5 w-3.5" /> Template
+          <a href="/api/admin/students/import-template" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-hover">
+            <Download className="h-4 w-4" /> Download template
           </a>
         </div>
-        <p className="text-[11px] text-gray-600">
-          Columns: username, email, name, roll_no, branch, cgpa, backlogs, phone (optional), password (optional — if blank,
-          the student is emailed a temporary password).
+        <p className="text-xs text-muted">
+          Columns: <span className="font-mono">username, email, name, roll_no, branch, cgpa, backlogs</span>, plus optional{" "}
+          <span className="font-mono">phone</span> and <span className="font-mono">password</span>. Students without a password are emailed a temporary one.
         </p>
 
         {job && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            {running && <p className="text-sm text-gray-400 animate-pulse">Checking {job.total_rows || ""} rows...</p>}
+          <div className="rounded-md border border-line p-4">
+            {running && <p className="text-sm text-muted">Checking {job.total_rows || ""} rows…</p>}
             {job.status === "succeeded" && (
-              <p className="flex items-center gap-2 text-sm font-bold text-success">
+              <p className="flex items-center gap-2 text-sm font-medium text-success">
                 <CheckCircle2 className="h-4 w-4" /> Imported {job.created_count} students.
               </p>
             )}
             {job.status === "failed" && (
               <>
-                <p className="flex items-center gap-2 text-sm font-bold text-danger">
+                <p className="flex items-center gap-2 text-sm font-medium text-danger">
                   <XCircle className="h-4 w-4" /> Nothing was imported. Fix these rows and upload again:
                 </p>
-                <ul className="mt-3 max-h-60 space-y-2 overflow-y-auto text-xs">
+                <ul className="mt-3 max-h-60 divide-y divide-line overflow-y-auto rounded-md border border-line text-sm">
                   {job.errors.map((e) => (
-                    <li key={e.row} className="rounded-lg bg-danger/5 px-3 py-2">
-                      <span className="font-bold text-white">{e.row > 1 ? `Row ${e.row}` : "File"}:</span>{" "}
-                      <span className="text-gray-400">{e.errors.join(" ")}</span>
+                    <li key={e.row} className="flex gap-3 px-3 py-2">
+                      <span className="num w-14 shrink-0 font-medium text-ink">{e.row > 1 ? `Row ${e.row}` : "File"}</span>
+                      <span className="text-muted">{e.errors.join(" ")}</span>
                     </li>
                   ))}
                 </ul>
@@ -82,9 +82,9 @@ export function ImportStudents({ open, onClose, onImported }) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 border-t border-line pt-4">
           <GhostButton onClick={onClose}>{job?.status === "succeeded" ? "Done" : "Cancel"}</GhostButton>
-          <PrimaryButton onClick={upload} disabled={!file || running}>{running ? "Importing..." : "Import"}</PrimaryButton>
+          <PrimaryButton onClick={upload} disabled={!file || running}>{running ? "Importing…" : "Import"}</PrimaryButton>
         </div>
       </div>
     </Modal>
