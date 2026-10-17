@@ -7,35 +7,27 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       colors: {
-        background: '#07070a',
-        surface: 'rgba(255,255,255,0.04)',
-        surfaceHover: 'rgba(255,255,255,0.08)',
-        surfaceActive: 'rgba(255,255,255,0.12)',
-        textPrimary: '#ffffff',
-        textSecondary: '#a1a1aa',
-        primary: '#7c3aed',
-        primaryLight: '#a78bfa',
-        secondary: '#06b6d4',
-        accent: '#ec4899',
-        success: '#10b981',
-        warning: '#f59e0b',
-        danger: '#ef4444',
+        // PlaceIQ design tokens
+        navy: { DEFAULT: '#17243A', 700: '#1E2E48', 600: '#273A58' },
+        canvas: '#F5F7FB',
+        ink: '#172033',
+        muted: '#64748B',
+        line: '#E5EAF1',
+        brand: { DEFAULT: '#2563EB', hover: '#1D4ED8', soft: '#EFF4FF' },
+        success: { DEFAULT: '#15803D', soft: '#F0FDF4' },
+        warning: { DEFAULT: '#B45309', soft: '#FFFBEB' },
+        danger: { DEFAULT: '#B91C1C', soft: '#FEF2F2' },
       },
-      backgroundImage: {
-        'aurora': 'radial-gradient(ellipse at top left, rgba(124, 58, 237, 0.15) 0%, transparent 40%), radial-gradient(ellipse at top right, rgba(236, 72, 153, 0.1) 0%, transparent 40%), radial-gradient(ellipse at bottom, rgba(6, 182, 212, 0.1) 0%, transparent 40%)',
+      boxShadow: {
+        card: '0 1px 2px rgba(16, 24, 40, 0.04)',
+        pop: '0 12px 32px -8px rgba(16, 24, 40, 0.18)',
       },
-      animation: {
-        'aurora-pan': 'aurora-pan 15s ease-in-out infinite alternate',
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
       },
-      keyframes: {
-        'aurora-pan': {
-          '0%': { backgroundPosition: '0% 0%' },
-          '100%': { backgroundPosition: '100% 100%' }
-        }
-      }
     },
   },
   plugins: [],

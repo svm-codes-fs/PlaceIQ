@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Search, Plus, Pencil, Trash2, CheckCircle2, Users, FileUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, FileUp } from "lucide-react";
 import { api } from "@/utils/api";
 import { Modal } from "@/components/ui/Modal";
 import { ImportStudents } from "./ImportStudents";
 import { Pagination, useDebounced } from "@/components/ui/Pagination";
+import { Alert, Field, GhostButton, IconButton, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
+import { Avatar, Card, EmptyState, LoadingRows, Page, PageHeader, SearchInput } from "@/components/ui/Page";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const PER_PAGE = 25;
-import { Alert, Field, GhostButton, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
 
 const BRANCHES = ["CSE", "ECE", "ME", "CE", "EE", "CHE"];
 const EMPTY = { username: "", email: "", password: "", name: "", roll_no: "", phone: "", branch: "CSE", cgpa: "", backlogs: "0" };
@@ -41,124 +42,78 @@ export function AdminStudents() {
   const filteredStudents = data.items;
 
   return (
-    <div className="max-w-7xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
-
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase mb-1">Management</p>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tighter leading-tight">
-            STUDENT <span className="text-gradient">DIRECTORY.</span>
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {data.all_students.toLocaleString()} students registered · {data.placed.toLocaleString()} placed
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search students..."
-              aria-label="Search students"
-              className="pl-9 pr-4 py-2.5 bg-white/5 border border-white/5 rounded-xl text-xs text-white focus:bg-white/10 focus:border-white/20 focus:outline-none transition-all w-56"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <GhostButton onClick={() => setImporting(true)}>
-            <FileUp className="w-3.5 h-3.5" /> Import CSV
-          </GhostButton>
-          <PrimaryButton onClick={() => setEditing({})}>
-            <Plus className="w-3.5 h-3.5" /> Add Student
-          </PrimaryButton>
-        </div>
-      </header>
+    <Page>
+      <PageHeader
+        title="Students"
+        description={`${data.all_students.toLocaleString()} registered · ${data.placed.toLocaleString()} placed`}
+        actions={
+          <>
+            <GhostButton onClick={() => setImporting(true)}>
+              <FileUp className="h-4 w-4" /> Import CSV
+            </GhostButton>
+            <PrimaryButton onClick={() => setEditing({})}>
+              <Plus className="h-4 w-4" /> Add student
+            </PrimaryButton>
+          </>
+        }
+      />
 
       {notice && <Alert type={notice.type}>{notice.text}</Alert>}
 
-      <div className="glass-panel border border-white/5 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5">
-                {["Student", "Branch", "CGPA", "Backlogs", "Status", ""].map((h) => (
-                  <th key={h} className="px-5 py-3 text-[10px] font-bold text-gray-500 tracking-widest uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {loading ? (
-                <tr><td colSpan="6" className="px-5 py-10 text-center text-gray-600 text-sm animate-pulse">Loading directory...</td></tr>
-              ) : filteredStudents.length === 0 ? (
-                <tr>
-                  <td colSpan="6">
-                    <div className="flex flex-col items-center py-10 text-center px-6">
-                      <Users className="w-8 h-8 text-gray-700 mb-2" />
-                      <p className="text-sm font-bold text-gray-400">No students found</p>
-                      <p className="text-xs text-gray-600 mt-1">{search ? "Try adjusting your search query." : "Add a student or share the registration page."}</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredStudents.map((student, i) => (
-                  <motion.tr
-                    key={student.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.02 }}
-                    className="group hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-white/5 text-white flex items-center justify-center font-bold text-xs group-hover:bg-primary transition-all border border-white/5 shrink-0">
-                          {student.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm text-white">{student.name}</p>
-                          <p className="text-[10px] text-gray-600 tracking-widest">{student.roll_no} · {student.username}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex px-2.5 py-1 bg-white/5 text-gray-400 border border-white/5 rounded-lg text-[10px] font-bold tracking-widest uppercase">
-                        {student.branch}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm font-semibold text-white">{student.cgpa.toFixed(2)}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-sm font-semibold ${student.backlogs > 0 ? 'text-danger' : 'text-gray-500'}`}>
-                        {student.backlogs}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {student.placement_status === 'Placed' ? (
-                        <span className="inline-flex items-center gap-1 text-success text-[10px] font-bold uppercase tracking-widest">
-                          <CheckCircle2 className="w-3 h-3" /> Placed
-                        </span>
-                      ) : (
-                        <span className="text-gray-600 text-[10px] font-bold uppercase tracking-widest">Unplaced</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => setEditing(student)} aria-label={`Edit ${student.name}`}
-                          className="p-1.5 text-gray-600 hover:text-white transition-colors rounded-lg hover:bg-white/10">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => remove(student)} aria-label={`Delete ${student.name}`}
-                          className="p-1.5 text-gray-600 hover:text-danger transition-colors rounded-lg hover:bg-danger/10">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      <Card flush>
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, roll number or branch" label="Search students" inputClassName="sm:w-80" />
+          <p className="num text-sm text-muted">{data.total.toLocaleString()} {data.total === 1 ? "result" : "results"}</p>
         </div>
+        {loading ? (
+          <LoadingRows rows={6} />
+        ) : filteredStudents.length === 0 ? (
+          <EmptyState icon={Users} title="No students found"
+            description={search ? "Try a different name, roll number or branch." : "Add students one by one, import a CSV, or share the registration page."} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table-base">
+              <thead>
+                <tr>
+                  <th>Student</th><th>Roll number</th><th>Branch</th><th className="text-right">CGPA</th>
+                  <th className="text-right">Backlogs</th><th>Status</th><th><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((student) => (
+                  <tr key={student.id}>
+                    <td className="max-w-[16rem]">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={student.name} />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-ink" title={student.name}>{student.name}</p>
+                          <p className="truncate text-xs text-muted" title={student.email}>{student.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="num whitespace-nowrap text-muted">{student.roll_no}</td>
+                    <td><span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">{student.branch}</span></td>
+                    <td className="num text-right font-medium">{student.cgpa.toFixed(2)}</td>
+                    <td className={`num text-right ${student.backlogs > 0 ? "font-medium text-danger" : "text-muted"}`}>{student.backlogs}</td>
+                    <td><StatusBadge status={student.placement_status} /></td>
+                    <td>
+                      <div className="flex justify-end gap-1">
+                        <IconButton onClick={() => setEditing(student)} aria-label={`Edit ${student.name}`} title="Edit">
+                          <Pencil className="h-4 w-4" />
+                        </IconButton>
+                        <IconButton danger onClick={() => remove(student)} aria-label={`Delete ${student.name}`} title="Delete">
+                          <Trash2 className="h-4 w-4" />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <Pagination page={page} perPage={PER_PAGE} total={data.total} onPage={setPage} />
-      </div>
+      </Card>
 
       <ImportStudents
         open={importing}
@@ -171,7 +126,7 @@ export function AdminStudents() {
         onClose={() => setEditing(null)}
         onSaved={(text) => { setEditing(null); setNotice({ type: "success", text }); load(); }}
       />
-    </div>
+    </Page>
   );
 }
 
@@ -231,9 +186,9 @@ function StudentForm({ student, onClose, onSaved }) {
             <Field label="Backlogs"><TextInput required type="number" min="0" value={form.backlogs} onChange={set("backlogs")} /></Field>
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-line pt-4">
           <GhostButton type="button" onClick={onClose}>Cancel</GhostButton>
-          <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving..." : isNew ? "Add student" : "Save changes"}</PrimaryButton>
+          <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving…" : isNew ? "Add student" : "Save changes"}</PrimaryButton>
         </div>
       </form>
     </Modal>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { api } from "@/utils/api";
 import { Alert, Field, PrimaryButton, TextInput, errorMessage } from "@/components/ui/Form";
+import { LoadingRows, Page, PageHeader } from "@/components/ui/Page";
 
 export function AdminPolicies() {
   const [policies, setPolicies] = useState(null);
@@ -10,22 +11,16 @@ export function AdminPolicies() {
   useEffect(() => { api.get("/admin/policies").then(setPolicies); }, []);
 
   return (
-    <div className="max-w-5xl mx-auto pt-6 pb-12 space-y-5 animate-in fade-in duration-500">
-      <header>
-        <p className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase mb-1">Management</p>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tighter leading-tight">
-          PLACEMENT <span className="text-gradient">POLICIES.</span>
-        </h1>
-        <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-          Rules your college applies on top of each drive's own criteria. Students see exactly which rule blocks them,
-          and the database rejects ineligible applications even if the app is bypassed.
-        </p>
-      </header>
+    <Page className="max-w-5xl">
+      <PageHeader
+        title="Placement policies"
+        description="Rules your college applies on top of each drive's own criteria. Students see exactly which rule blocks them, and the database rejects ineligible applications even if the app is bypassed."
+      />
 
       {notice && <Alert type={notice.type} items={notice.items}>{notice.text}</Alert>}
 
       {!policies ? (
-        <p className="py-12 text-center text-sm text-gray-600 animate-pulse">Loading policies...</p>
+        <LoadingRows rows={4} className="p-0" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {policies.map((p) => (
@@ -38,7 +33,7 @@ export function AdminPolicies() {
           ))}
         </div>
       )}
-    </div>
+    </Page>
   );
 }
 
@@ -60,13 +55,13 @@ function PolicyCard({ policy, onSaved, onError }) {
   };
 
   return (
-    <div className={`glass-panel rounded-2xl border p-5 transition-colors ${enabled ? "border-primary/30" : "border-white/5"}`}>
+    <div className={`flex flex-col rounded-lg border bg-white p-5 shadow-card transition-colors ${enabled ? "border-blue-200" : "border-line"}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-3">
-          <ShieldCheck className={`mt-0.5 h-4 w-4 shrink-0 ${enabled ? "text-primaryLight" : "text-gray-600"}`} />
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${enabled ? "bg-brand-soft text-brand" : "bg-slate-100 text-slate-500"}`}><ShieldCheck className="h-4 w-4" /></span>
           <div>
-            <h2 className="text-sm font-bold text-white">{policy.label}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-gray-500">{policy.description}</p>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">{policy.label}<span className={`rounded px-1.5 py-0.5 text-2xs font-medium ${enabled ? "bg-green-50 text-success" : "bg-slate-100 text-muted"}`}>{enabled ? "On" : "Off"}</span></h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted">{policy.description}</p>
           </div>
         </div>
         <button
@@ -74,9 +69,9 @@ function PolicyCard({ policy, onSaved, onError }) {
           aria-checked={enabled}
           aria-label={`${policy.label} ${enabled ? "on" : "off"}`}
           onClick={() => setEnabled(!enabled)}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-white/10"}`}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${enabled ? "bg-brand" : "bg-slate-300"}`}
         >
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${enabled ? "left-[1.375rem]" : "left-0.5"}`} />
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${enabled ? "left-[1.375rem]" : "left-0.5"}`} />
         </button>
       </div>
 
@@ -97,8 +92,8 @@ function PolicyCard({ policy, onSaved, onError }) {
         </div>
       )}
 
-      <div className="mt-4 flex justify-end">
-        <PrimaryButton onClick={save} disabled={!dirty || saving}>{saving ? "Saving..." : "Save"}</PrimaryButton>
+      <div className="mt-auto flex justify-end pt-4">
+        <PrimaryButton onClick={save} disabled={!dirty || saving}>{saving ? "Saving…" : "Save changes"}</PrimaryButton>
       </div>
     </div>
   );

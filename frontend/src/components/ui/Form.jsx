@@ -1,15 +1,17 @@
-// Dark-theme form controls shared by the admin and auth pages.
+// Form controls and buttons shared across the app.
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 const controlClass =
-  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all disabled:opacity-50";
+  "block w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-card placeholder:text-slate-400 " +
+  "focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-muted";
 
 export function Field({ label, hint, className, children }) {
   return (
     <label className={cn("block space-y-1.5", className)}>
-      <span className="ml-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</span>
+      <span className="block text-sm font-medium text-ink">{label}</span>
       {children}
-      {hint && <span className="ml-1 block text-[11px] text-gray-600">{hint}</span>}
+      {hint && <span className="block text-xs text-muted">{hint}</span>}
     </label>
   );
 }
@@ -18,9 +20,13 @@ export function TextInput({ className, ...props }) {
   return <input className={cn(controlClass, className)} {...props} />;
 }
 
+export function Textarea({ className, ...props }) {
+  return <textarea className={cn(controlClass, "leading-relaxed", className)} {...props} />;
+}
+
 export function Select({ className, options, ...props }) {
   return (
-    <select className={cn(controlClass, "appearance-none [&>option]:bg-[#101018]", className)} {...props}>
+    <select className={cn(controlClass, "pr-8", className)} {...props}>
       {options.map((o) => {
         const { value, label } = typeof o === "object" ? o : { value: o, label: o };
         return <option key={value} value={value}>{label}</option>;
@@ -31,30 +37,36 @@ export function Select({ className, options, ...props }) {
 
 export function Alert({ type = "error", children, items }) {
   if (!children) return null;
-  const styles = type === "success"
-    ? "bg-success/10 border-success/20 text-success"
-    : "bg-danger/10 border-danger/20 text-danger";
+  const success = type === "success";
+  const Icon = success ? CheckCircle2 : AlertCircle;
   return (
-    <div role={type === "error" ? "alert" : "status"} className={cn("rounded-xl border px-4 py-3 text-xs font-bold", styles)}>
-      {children}
-      {items?.length > 1 && (
-        <ul className="mt-1.5 list-disc space-y-0.5 pl-4 font-medium">
-          {items.map((i) => <li key={i}>{i}</li>)}
-        </ul>
+    <div
+      role={success ? "status" : "alert"}
+      className={cn(
+        "flex gap-3 rounded-md border px-4 py-3 text-sm",
+        success ? "border-green-200 bg-success-soft text-success" : "border-red-200 bg-danger-soft text-danger"
       )}
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <div className="min-w-0">
+        <p className="font-medium">{children}</p>
+        {items?.length > 1 && (
+          <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] opacity-90">
+            {items.map((i) => <li key={i}>{i}</li>)}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
 
+const buttonBase =
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-sm font-medium " +
+  "transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+
 export function PrimaryButton({ className, children, ...props }) {
   return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2563EB] px-5 py-2.5 text-xs font-bold tracking-wide text-white transition-all hover:shadow-[0_0_20px_-5px_rgba(124,58,237,0.5)] disabled:opacity-50",
-        className
-      )}
-      {...props}
-    >
+    <button className={cn(buttonBase, "bg-brand text-white shadow-card hover:bg-brand-hover", className)} {...props}>
       {children}
     </button>
   );
@@ -64,10 +76,33 @@ export function GhostButton({ className, children, danger = false, ...props }) {
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold tracking-wide transition-all disabled:opacity-50",
-        danger
-          ? "border-danger/30 text-danger hover:bg-danger/10"
-          : "border-white/10 text-gray-300 hover:bg-white/10 hover:text-white",
+        buttonBase,
+        "border bg-white shadow-card",
+        danger ? "border-red-200 text-danger hover:bg-danger-soft" : "border-line text-ink hover:bg-slate-50",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function DangerButton({ className, children, ...props }) {
+  return (
+    <button className={cn(buttonBase, "bg-danger text-white shadow-card hover:bg-red-800", className)} {...props}>
+      {children}
+    </button>
+  );
+}
+
+// Small square icon button for table row actions
+export function IconButton({ className, danger = false, children, ...props }) {
+  return (
+    <button
+      className={cn(
+        "inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors",
+        danger ? "hover:bg-danger-soft hover:text-danger" : "hover:bg-slate-100 hover:text-ink",
         className
       )}
       {...props}
