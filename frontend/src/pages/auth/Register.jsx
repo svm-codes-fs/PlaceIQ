@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Hexagon } from "lucide-react";
 import { api } from "@/utils/api";
 import { Alert, Field, PrimaryButton, Select, TextInput, errorMessage } from "@/components/ui/Form";
+import { AuthShell } from "./Login";
 
 const BRANCHES = ["CSE", "ECE", "ME", "CE", "EE", "CHE"];
 
@@ -39,57 +39,50 @@ export function Register({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#07070A] px-4 py-12">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-8 flex items-center gap-3">
-          <Hexagon className="h-7 w-7 text-white fill-white/10" />
-          <span className="text-lg font-bold tracking-[0.2em] text-white">PLACEIQ</span>
-        </div>
+    <AuthShell wide>
+      <div className="w-full max-w-2xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">Create your student account</h1>
+        <p className="mt-1 text-sm text-muted">Register at your college to see drives you are eligible for.</p>
 
-        <div className="rounded-3xl border border-white/10 bg-[#12121A]/70 p-8 md:p-10">
-          <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-white">CREATE YOUR ACCOUNT.</h1>
-          <p className="mb-8 text-sm text-white/60">Register as a student at your college.</p>
+        <form onSubmit={submit} className="mt-8 space-y-5">
+          {error && <Alert items={error.items}>{error.text}</Alert>}
 
-          <form onSubmit={submit} className="space-y-5">
-            {error && <Alert items={error.items}>{error.text}</Alert>}
+          <Field label="College">
+            <Select
+              required
+              value={form.college_id}
+              onChange={set("college_id")}
+              options={[{ value: "", label: "Choose your college" },
+                ...colleges.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))]}
+            />
+          </Field>
 
-            <Field label="College">
-              <Select
-                required
-                value={form.college_id}
-                onChange={set("college_id")}
-                options={[{ value: "", label: "Choose your college" },
-                  ...colleges.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))]}
-              />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Full name"><TextInput required value={form.name} onChange={set("name")} autoComplete="name" /></Field>
+            <Field label="Roll number"><TextInput required value={form.roll_no} onChange={set("roll_no")} /></Field>
+            <Field label="Username"><TextInput required value={form.username} onChange={set("username")} autoComplete="username" /></Field>
+            <Field label="Email"><TextInput required type="email" value={form.email} onChange={set("email")} autoComplete="email" /></Field>
+            <Field label="Password" hint="At least 8 characters">
+              <TextInput required type="password" minLength={8} value={form.password} onChange={set("password")} autoComplete="new-password" />
             </Field>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Full name"><TextInput required value={form.name} onChange={set("name")} autoComplete="name" /></Field>
-              <Field label="Roll number"><TextInput required value={form.roll_no} onChange={set("roll_no")} /></Field>
-              <Field label="Username"><TextInput required value={form.username} onChange={set("username")} autoComplete="username" /></Field>
-              <Field label="Email"><TextInput required type="email" value={form.email} onChange={set("email")} autoComplete="email" /></Field>
-              <Field label="Password" hint="At least 8 characters">
-                <TextInput required type="password" minLength={8} value={form.password} onChange={set("password")} autoComplete="new-password" />
-              </Field>
-              <Field label="Phone (optional)"><TextInput value={form.phone} onChange={set("phone")} autoComplete="tel" /></Field>
-              <Field label="Branch"><Select value={form.branch} onChange={set("branch")} options={BRANCHES} /></Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="CGPA"><TextInput required type="number" step="0.01" min="0" max="10" value={form.cgpa} onChange={set("cgpa")} /></Field>
-                <Field label="Backlogs"><TextInput required type="number" min="0" value={form.backlogs} onChange={set("backlogs")} /></Field>
-              </div>
+            <Field label="Phone (optional)"><TextInput value={form.phone} onChange={set("phone")} autoComplete="tel" /></Field>
+            <Field label="Branch"><Select value={form.branch} onChange={set("branch")} options={BRANCHES} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="CGPA"><TextInput required type="number" step="0.01" min="0" max="10" value={form.cgpa} onChange={set("cgpa")} /></Field>
+              <Field label="Backlogs"><TextInput required type="number" min="0" value={form.backlogs} onChange={set("backlogs")} /></Field>
             </div>
+          </div>
 
-            <PrimaryButton type="submit" disabled={saving} className="w-full py-3.5 text-sm">
-              {saving ? "Creating account..." : "Create account"}
-            </PrimaryButton>
-          </form>
+          <PrimaryButton type="submit" disabled={saving} className="w-full py-2.5 sm:w-auto">
+            {saving ? "Creating account…" : "Create account"}
+          </PrimaryButton>
+        </form>
 
-          <p className="mt-6 text-center text-sm text-white/50">
-            Already registered?{" "}
-            <Link to="/login" className="font-bold text-[#a78bfa] hover:text-white">Sign in</Link>
-          </p>
-        </div>
+        <p className="mt-6 text-sm text-muted">
+          Already registered?{" "}
+          <Link to="/login" className="font-medium text-brand hover:text-brand-hover">Sign in</Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

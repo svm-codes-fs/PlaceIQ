@@ -66,7 +66,7 @@ export function AdminApplications() {
 
       <Card flush>
         <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center">
-          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search student, roll number or company" label="Search applications" inputClassName="sm:w-80" />
+          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search student or company" label="Search applications" inputClassName="sm:w-80" />
           <Select
             aria-label="Filter by status"
             value={status}
